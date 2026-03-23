@@ -22,7 +22,7 @@ PASTA_DADOS = "avaliacoes_salvas"
 if not os.path.exists(PASTA_DADOS):
     os.makedirs(PASTA_DADOS)
 
-# ========== FUNÇÕES DE APOIO ==========
+# ========== FUNÇÕES DE SISTEMA ==========
 def salvar_dados_colaborador(nome, dados):
     nome_arq = nome.replace(" ", "_").lower()
     caminho = os.path.join(PASTA_DADOS, f"{nome_arq}.json")
@@ -37,7 +37,75 @@ def carregar_dados_colaborador(nome):
             return json.load(f)
     return None
 
-# ========== INTERFACE ==========
+# ========== GERAR PDF COMPLETO ==========
+def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_gestor, dissert, m_final):
+    nome_limpo = dados_cabecalho['Nome'].replace(' ', '_')
+    arquivo_pdf = f"AVALIACAO_FINAL_{nome_limpo}.pdf"
+    c = canvas.Canvas(arquivo_pdf, pagesize=A4)
+    width, height = A4
+    
+    y = height - 50
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width/2, y, "🏝️ RESULTADO FINAL - AVALIAÇÃO MALDIVAS")
+    
+    y -= 30
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(50, y, f"Colaborador: {dados_cabecalho['Nome']} | Área: {dados_cabecalho['Area']}")
+    y -= 15
+    c.drawString(50, y, f"Gestor: {dados_cabecalho['Gestor']} | Período: {dados_cabecalho['Periodo']}")
+    y -= 30
+
+    pergunta_style = ParagraphStyle("P", fontSize=9, leading=11)
+
+    for i, p in enumerate(perguntas):
+        if y < 100:
+            c.showPage()
+            y = height - 50
+            
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(50, y, f"{i+1}. {p}")
+        y -= 15
+        c.setFont("Helvetica", 9)
+        c.drawString(60, y, f"Nota Colab: {n_colab[i]} | Nota Gestor: {n_gestor[i]}")
+        y -= 12
+        
+        if j_colab[i]:
+            c.setFont("Helvetica-Oblique", 8)
+            c.drawString(60, y, f"Just. Colab: {j_colab[i][:100]}")
+            y -= 10
+        if j_gestor[i]:
+            c.setFont("Helvetica-Oblique", 8)
+            c.setFillColor(colors.blue)
+            c.drawString(60, y, f"Obs Gestor: {j_gestor[i][:100]}")
+            c.setFillColor(colors.black)
+            y -= 10
+        y -= 15
+
+    y -= 20
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(50, y, f"MÉDIA FINAL PONDERADA (40/60): {m_final:.2f}")
+    c.save()
+    return arquivo_pdf
+
+def enviar_email(nome, arquivo_pdf, media):
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_ORIGEM
+    msg["To"] = EMAIL_DESTINO
+    msg["Subject"] = f"Avaliação Concluída - {nome}"
+    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final: {media:.2f}\nPDF em anexo."
+    msg.attach(MIMEText(corpo, "plain"))
+    try:
+        with open(arquivo_pdf, "rb") as f:
+            parte = MIMEBase("application", "pdf")
+            parte.set_payload(f.read()); encoders.encode_base64(parte)
+            parte.add_header("Content-Disposition", f"attachment; filename={os.path.basename(arquivo_pdf)}")
+            msg.attach(parte)
+        server = smtplib.SMTP("smtp.gmail.com", 587); server.starttls()
+        server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", "")); server.send_message(msg); server.quit()
+        return True
+    except: return False
+
+# ========== INTERFACE STREAMLIT ==========
 st.set_page_config(page_title="Avaliação Maldivas", layout="wide")
 
 with st.sidebar:
@@ -47,7 +115,6 @@ with st.sidebar:
 
 st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-# CAMPOS DE CABEÇALHO
 col_cab1, col_cab2 = st.columns(2)
 with col_cab1:
     nome_input = st.text_input("Nome do Avaliado*").strip()
@@ -59,12 +126,8 @@ gestor_input = st.text_input("Gestor Direto*")
 
 dados_existentes = carregar_dados_colaborador(nome_input) if nome_input else None
 
-if dados_existentes:
-    st.info(f"✅ Autoavaliação de **{nome_input}** carregada. Notas do colaborador estão fixadas.")
-
 st.divider()
 
-# LISTA DE PERGUNTAS (Adicionada a 10ª)
 perguntas = [
     "Qualidade técnica e precisão nas tarefas operacionais?",
     "Cumprimento de prazos e organização de demandas?",
@@ -75,83 +138,53 @@ perguntas = [
     "Capacidade de aprender e se adaptar a mudanças",
     "Proatividade na identificação e solução de problemas",
     "Comunicação clara e eficaz",
-    "Assiduidade, pontualidade e compromisso com a jornada?" # Nova pergunta adicionada
+    "Assiduidade, pontualidade e compromisso com a jornada?"
 ]
 
-notas_colab = []
-notas_gestor = []
-justificativas_colab = []
-justificativas_gestor = []
+notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
 for i, p in enumerate(perguntas):
     st.subheader(f"{i+1}. {p}")
     c1, c2 = st.columns(2)
-    
     with c1:
-        st.markdown("**Colaborador**")
         v_padrao_c = dados_existentes['notas_c'][i] if dados_existentes else 3
-        n_c = st.selectbox(f"Sua Nota", [1,2,3,4,5], index=v_padrao_c-1, key=f"nc_{i}", disabled=dados_existentes is not None)
-        
+        n_c = st.selectbox(f"Nota Colaborador", [1,2,3,4,5], index=v_padrao_c-1, key=f"nc_{i}", disabled=dados_existentes is not None)
+        v_obs_c = dados_existentes['just_c'][i] if dados_existentes else ""
         obs_c = ""
         if n_c in [1, 5]:
-            v_obs_c = dados_existentes['just_c'][i] if dados_existentes else ""
-            obs_c = st.text_area(f"Justificativa obrigatória (Nota {n_c})*", value=v_obs_c, key=f"obsc_{i}", disabled=dados_existentes is not None)
-    
+            obs_c = st.text_area(f"Justificativa (Nota {n_c})*", value=v_obs_c, key=f"obsc_{i}", disabled=dados_existentes is not None)
     with c2:
-        st.markdown("**Gestão**")
         n_g = st.selectbox(f"Nota Gestor", [1,2,3,4,5], index=2, key=f"ng_{i}", disabled=not is_gestora)
-        obs_g = st.text_area(f"Comentários da Gestão (Opcional)", key=f"obsg_{i}", disabled=not is_gestora)
+        obs_g = st.text_area(f"Comentários da Gestão", key=f"obsg_{i}", disabled=not is_gestora)
     
-    notas_colab.append(n_c)
-    notas_gestor.append(n_g)
-    justificativas_colab.append(obs_c)
-    justificativas_gestor.append(obs_g)
-    st.divider()
+    notas_colab.append(n_c); notas_gestor.append(n_g)
+    just_colab.append(obs_c); just_gestor.append(obs_g)
 
-# PERGUNTA DISSERTATIVA FINAL (PRESERVADA)
-st.write("**Visão Geral:**")
 v_dissert = dados_existentes['dissert'] if dados_existentes else ""
-dissertativa_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=dados_existentes is not None)
+dissert_input = st.text_area("Pergunta Final: Como você enxerga seu papel...*", value=v_dissert, disabled=dados_existentes is not None)
 
-# ========== LÓGICA DE ENVIO ==========
-
-# 1. BOTÃO DO COLABORADOR (Só aparece se não houver dados salvos)
+# ========== BOTÕES DE AÇÃO (CORRIGIDOS) ==========
 if not dados_existentes:
-    if st.button("Enviar minha Autoavaliação", use_container_width=True):
-        if not nome_input or not area_input or not dissertativa_input:
-            st.error("Por favor, preencha todos os campos obrigatórios (Nome, Área e Pergunta Final).")
+    if st.button("Enviar minha Autoavaliação", type="primary"):
+        if nome_input and area_input and diss_input:
+            salvar_dados_colaborador(nome_input, {"notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, "area": area_input, "gestor": gestor_input, "periodo": periodo_input})
+            st.success("Salvo! Agora a gestora pode acessar.")
+            st.rerun() # Força a atualização para travar os campos
         else:
-            # Validar justificativas 1 e 5
-            erro_just = False
-            for i, nota in enumerate(notas_colab):
-                if nota in [1, 5] and len(justificativas_colab[i].strip()) < 5:
-                    st.error(f"A pergunta {i+1} exige justificativa para a nota {nota}.")
-                    erro_just = True
-            
-            if not erro_just:
-                dados_save = {
-                    "notas_c": notas_colab, 
-                    "just_c": justificativas_colab, 
-                    "dissert": dissertativa_input,
-                    "area": area_input,
-                    "gestor": gestor_input,
-                    "ano": ano_input,
-                    "periodo": periodo_input
-                }
-                salvar_dados_colaborador(nome_input, dados_save)
-                st.success("Autoavaliação salva com sucesso! Agora a gestora pode finalizar.")
-                st.balloons()
+            st.error("Preencha os campos obrigatórios.")
 
-# 2. BOTÃO DA GESTORA (Só aparece se for gestora e houver dados do colab)
 elif is_gestora:
-    if st.button("Finalizar Avaliação e Gerar Média (40/60)", type="primary", use_container_width=True):
-        m_c = sum(notas_colab) / len(notas_colab)
-        m_g = sum(notas_gestor) / len(notas_gestor)
-        media_final = (m_c * 0.40) + (m_g * 0.60)
-        
-        st.write(f"### Média Final Calculada: {media_final:.2f}")
-        st.success("Processando PDF e enviando e-mail...")
-        
-        # Aqui chamaria as funções de PDF e E-mail (gerar_pdf e enviar_email)
-        # que você já tem no código original, passando os novos parâmetros.
-        st.balloons()
+    if st.button("Finalizar Avaliação e Enviar E-mail", type="primary"):
+        with st.spinner("Gerando PDF e enviando..."):
+            m_c = sum(notas_colab) / len(notas_colab)
+            m_g = sum(notas_gestor) / len(notas_gestor)
+            m_final = (m_c * 0.4) + (m_g * 0.6)
+            
+            cabecalho = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input}
+            pdf_path = gerar_pdf_final(cabecalho, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final)
+            
+            if enviar_email(nome_input, pdf_path, m_final):
+                st.success(f"Enviado com sucesso! Média: {m_final:.2f}")
+                if os.path.exists(pdf_path): os.remove(pdf_path)
+            else:
+                st.error("Erro no envio do e-mail.")
