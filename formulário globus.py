@@ -3,6 +3,7 @@ import os
 import json
 import smtplib
 import glob
+import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
@@ -12,8 +13,9 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
 # ========== CONFIGURAÇÕES ==========
-EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
-SENHA_APP = "hlvu kwvm tyfw pxem" 
+# ⚠️ IMPORTANTE: Use a "Senha de App" de 16 dígitos do Google.
+EMAIL_ORIGEM = "seu_email@gmail.com" 
+SENHA_APP = "abcd efgh ijkl mnop" 
 EMAIL_DESTINO = "victormoreiraicnv@gmail.com"
 SENHA_GESTOR = "admin123" 
 SENHA_DIRETORA = "diretoria2026" 
@@ -97,7 +99,7 @@ def enviar_email(nome, arquivo_pdf, media):
     msg["From"] = EMAIL_ORIGEM
     msg["To"] = EMAIL_DESTINO
     msg["Subject"] = f"Avaliação Maldivas Concluída - {nome}"
-    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final Ponderada: {media:.2f}"
+    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final Ponderada: {media:.2f}\n\nO PDF detalhado segue em anexo."
     msg.attach(MIMEText(corpo, "plain"))
     try:
         with open(arquivo_pdf, "rb") as f:
@@ -143,27 +145,24 @@ with st.sidebar:
             if st.button("Limpar Ciclo (Deletar Tudo)"):
                 for f in glob.glob(os.path.join(PASTA_DADOS, "*.json")):
                     os.remove(f)
+                st.success("Arquivos removidos!")
                 st.rerun()
 
 st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-# Lógica de bloqueio: se dados_existentes for True, desabilita os campos do colaborador
+# Lógica de carregamento de dados
 dados_existentes = carregar_dados_colaborador(nome_para_carregar) if nome_para_carregar else None
 is_bloqueado = dados_existentes is not None
 
 col_cab1, col_cab2 = st.columns(2)
 with col_cab1:
     nome_input = st.text_input("Nome do Avaliado*", value=nome_para_carregar, disabled=is_bloqueado).strip()
-    
-    # Busca a área salva ou deixa vazio
     v_area = dados_existentes.get('area', "") if is_bloqueado else ""
     area_input = st.text_input("Qual sua área*", value=v_area, disabled=is_bloqueado)
 
 with col_cab2:
-    # Busca o ano e período salvos
     v_ano = dados_existentes.get('ano', "2026") if is_bloqueado else "2026"
     ano_input = st.selectbox("Qual ano", ["2026", "2027", "2028"], index=["2026", "2027", "2028"].index(v_ano), disabled=is_bloqueado)
-    
     v_per = dados_existentes.get('periodo', "1º semestre") if is_bloqueado else "1º semestre"
     periodo_input = st.radio("Qual período", ["1º semestre", "2º semestre"], index=0 if v_per == "1º semestre" else 1, horizontal=True, disabled=is_bloqueado)
 
@@ -172,6 +171,7 @@ gestor_input = st.text_input("Avaliador Direto*", value=v_gestor, disabled=is_bl
 
 st.divider()
 
+# Perguntas
 perguntas = [
     "Qualidade técnica e precisão nas tarefas operacionais?",
     "Cumprimento de prazos e organização de demandas?",
@@ -193,8 +193,7 @@ for i, p in enumerate(perguntas):
     with c1:
         st.markdown("**Autoavaliação**")
         v_nota_c = dados_existentes.get('notas_c', [3]*10)[i] if is_bloqueado else 3
-        n_c = st.selectbox(f"Nota Colaborador", [1,2,3,4,5], index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
-        
+        n_c = st.selectbox(f"Nota Colab", [1,2,3,4,5], index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
         v_obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
         obs_c = ""
         if n_c in [1, 5]:
@@ -203,32 +202,34 @@ for i, p in enumerate(perguntas):
     with c2:
         st.markdown("**Gestão/Direção**")
         n_g = st.selectbox(f"Nota Avaliador", [1,2,3,4,5], index=2, key=f"ng_{i}", disabled=not (is_gestora or is_diretora))
-        obs_g = st.text_area(f"Comentários do Avaliador", key=f"obsg_{i}", disabled=not (is_gestora or is_diretora))
+        obs_g = st.text_area(f"Obs Avaliador", key=f"obsg_{i}", disabled=not (is_gestora or is_diretora))
     
     notas_colab.append(n_c); notas_gestor.append(n_g)
     just_colab.append(obs_c); just_gestor.append(obs_g)
 
 v_dissert = dados_existentes.get('dissert', "") if is_bloqueado else ""
-dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=is_bloqueado)
+dissert_input = st.text_area("Visão de Futuro*", value=v_dissert, disabled=is_bloqueado)
 
 # ========== BOTÕES DE AÇÃO ==========
 if not is_bloqueado:
     if st.button("Enviar minha Autoavaliação", type="primary", use_container_width=True):
-        if nome_input and area_input:
+        if not nome_input or not area_input or not dissert_input:
+            st.error("⚠️ Preencha Nome, Área e a Pergunta Final.")
+        else:
             dados_save = {
                 "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, 
                 "area": area_input, "gestor": gestor_input, "periodo": periodo_input, "ano": ano_input
             }
             salvar_dados_colaborador(nome_input, dados_save)
-            st.success("Salvo! Avise sua gestão.")
+            st.success("✅ Salvo com sucesso!")
+            st.balloons()
+            time.sleep(1)
             st.rerun()
-        else:
-            st.error("Preencha Nome e Área.")
 
 elif is_gestora or is_diretora:
     cargo_label = "Gestora" if is_gestora else "Diretora"
     if st.button(f"Finalizar Avaliação como {cargo_label}", type="primary", use_container_width=True):
-        with st.spinner("Processando..."):
+        with st.spinner("Enviando..."):
             m_c, m_g = sum(notas_colab)/10, sum(notas_gestor)/10
             m_final = (m_c * 0.4) + (m_g * 0.6)
             
@@ -236,6 +237,8 @@ elif is_gestora or is_diretora:
             pdf_path = gerar_pdf_final(cabecalho, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final, cargo_label)
             
             if enviar_email(nome_input, pdf_path, m_final):
-                st.success(f"Enviado! Média: {m_final:.2f}")
+                st.success(f"✅ Enviado! Média: {m_final:.2f}")
                 st.balloons()
                 if os.path.exists(pdf_path): os.remove(pdf_path)
+            else:
+                st.error("❌ Erro no envio do e-mail.")
