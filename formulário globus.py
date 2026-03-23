@@ -12,7 +12,6 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
 # ========== CONFIGURAÇÕES ==========
-# ⚠️ IMPORTANTE: Use a "Senha de App" de 16 dígitos do Google, não sua senha normal.
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
 SENHA_APP = "hlvu kwvm tyfw pxem" 
 EMAIL_DESTINO = "victormoreiraicnv@gmail.com"
@@ -72,13 +71,17 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
         c.setFont("Helvetica", 9)
         c.drawString(60, y, f"Nota Avaliado: {n_colab[i]} | Nota {cargo_avaliador}: {n_gestor[i]}")
         y -= 12
-        if j_colab[i]:
+        
+        txt_colab = j_colab[i][:95] if j_colab[i] else ""
+        txt_gestor = j_gestor[i][:95] if j_gestor[i] else ""
+        
+        if txt_colab:
             c.setFont("Helvetica-Oblique", 8)
-            c.drawString(60, y, f"Just. Avaliado: {j_colab[i][:95]}")
+            c.drawString(60, y, f"Just. Avaliado: {txt_colab}")
             y -= 10
-        if j_gestor[i]:
+        if txt_gestor:
             c.setFillColor(colors.blue)
-            c.drawString(60, y, f"Obs {cargo_avaliador}: {j_gestor[i][:95]}")
+            c.drawString(60, y, f"Obs {cargo_avaliador}: {txt_gestor}")
             c.setFillColor(colors.black)
             y -= 10
         y -= 15
@@ -94,7 +97,7 @@ def enviar_email(nome, arquivo_pdf, media):
     msg["From"] = EMAIL_ORIGEM
     msg["To"] = EMAIL_DESTINO
     msg["Subject"] = f"Avaliação Maldivas Concluída - {nome}"
-    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final Ponderada: {media:.2f}\n\nO PDF detalhado segue em anexo."
+    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final Ponderada: {media:.2f}"
     msg.attach(MIMEText(corpo, "plain"))
     try:
         with open(arquivo_pdf, "rb") as f:
@@ -114,7 +117,7 @@ def enviar_email(nome, arquivo_pdf, media):
 # ========== INTERFACE STREAMLIT ==========
 st.set_page_config(page_title="Avaliação Maldivas", layout="wide")
 
-nome_para_carregar = "" # Inicializa para evitar NameError
+nome_para_carregar = "" 
 
 with st.sidebar:
     st.header("🔐 Área de Gestão/Direção")
@@ -124,30 +127,48 @@ with st.sidebar:
     is_diretora = (senha_input == SENHA_DIRETORA)
     
     if is_gestora or is_diretora:
-        cargo_ativo = "Gestora" if is_gestora else "Diretora"
-        st.success(f"Modo {cargo_ativo} Ativo")
+        st.success(f"Modo {'Gestora' if is_gestora else 'Diretora'} Ativo")
         st.divider()
-        st.subheader("📋 Pendentes de Avaliação")
+        st.subheader("📋 Pendentes")
         lista_pendentes = listar_avaliacoes_pendentes()
         if lista_pendentes:
-            selecionado = st.selectbox("Selecione para avaliar:", [""] + lista_pendentes)
+            selecionado = st.selectbox("Selecione um colaborador:", [""] + lista_pendentes)
             if selecionado:
                 nome_para_carregar = selecionado
         else:
             st.write("Nenhuma autoavaliação encontrada.")
+            
+        if is_diretora:
+            st.divider()
+            if st.button("Limpar Ciclo (Deletar Tudo)"):
+                for f in glob.glob(os.path.join(PASTA_DADOS, "*.json")):
+                    os.remove(f)
+                st.rerun()
 
 st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
+# Lógica de bloqueio: se dados_existentes for True, desabilita os campos do colaborador
+dados_existentes = carregar_dados_colaborador(nome_para_carregar) if nome_para_carregar else None
+is_bloqueado = dados_existentes is not None
+
 col_cab1, col_cab2 = st.columns(2)
 with col_cab1:
-    nome_input = st.text_input("Nome do Avaliado*", value=nome_para_carregar).strip()
-    area_input = st.text_input("Qual sua área*")
-with col_cab2:
-    ano_input = st.selectbox("Qual ano", ["2026", "2027", "2028"])
-    periodo_input = st.radio("Qual período", ["1º semestre", "2º semestre"], horizontal=True)
-gestor_input = st.text_input("Avaliador Direto*")
+    nome_input = st.text_input("Nome do Avaliado*", value=nome_para_carregar, disabled=is_bloqueado).strip()
+    
+    # Busca a área salva ou deixa vazio
+    v_area = dados_existentes.get('area', "") if is_bloqueado else ""
+    area_input = st.text_input("Qual sua área*", value=v_area, disabled=is_bloqueado)
 
-dados_existentes = carregar_dados_colaborador(nome_input) if nome_input else None
+with col_cab2:
+    # Busca o ano e período salvos
+    v_ano = dados_existentes.get('ano', "2026") if is_bloqueado else "2026"
+    ano_input = st.selectbox("Qual ano", ["2026", "2027", "2028"], index=["2026", "2027", "2028"].index(v_ano), disabled=is_bloqueado)
+    
+    v_per = dados_existentes.get('periodo', "1º semestre") if is_bloqueado else "1º semestre"
+    periodo_input = st.radio("Qual período", ["1º semestre", "2º semestre"], index=0 if v_per == "1º semestre" else 1, horizontal=True, disabled=is_bloqueado)
+
+v_gestor = dados_existentes.get('gestor', "") if is_bloqueado else ""
+gestor_input = st.text_input("Avaliador Direto*", value=v_gestor, disabled=is_bloqueado)
 
 st.divider()
 
@@ -171,12 +192,13 @@ for i, p in enumerate(perguntas):
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("**Autoavaliação**")
-        v_padrao_c = dados_existentes['notas_c'][i] if dados_existentes else 3
-        n_c = st.selectbox(f"Nota Colaborador", [1,2,3,4,5], index=v_padrao_c-1, key=f"nc_{i}", disabled=dados_existentes is not None)
-        v_obs_c = dados_existentes['just_c'][i] if dados_existentes else ""
+        v_nota_c = dados_existentes.get('notas_c', [3]*10)[i] if is_bloqueado else 3
+        n_c = st.selectbox(f"Nota Colaborador", [1,2,3,4,5], index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
+        
+        v_obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
         obs_c = ""
         if n_c in [1, 5]:
-            obs_c = st.text_area(f"Justificativa (Nota {n_c})*", value=v_obs_c, key=f"obsc_{i}", disabled=dados_existentes is not None)
+            obs_c = st.text_area(f"Justificativa (Nota {n_c})*", value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
     
     with c2:
         st.markdown("**Gestão/Direção**")
@@ -186,34 +208,34 @@ for i, p in enumerate(perguntas):
     notas_colab.append(n_c); notas_gestor.append(n_g)
     just_colab.append(obs_c); just_gestor.append(obs_g)
 
-v_dissert = dados_existentes['dissert'] if dados_existentes else ""
-dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=dados_existentes is not None)
+v_dissert = dados_existentes.get('dissert', "") if is_bloqueado else ""
+dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=is_bloqueado)
 
 # ========== BOTÕES DE AÇÃO ==========
-if not dados_existentes:
+if not is_bloqueado:
     if st.button("Enviar minha Autoavaliação", type="primary", use_container_width=True):
-        if nome_input and area_input and dissert_input:
-            dados_save = {"notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, "area": area_input, "gestor": gestor_input, "periodo": periodo_input}
+        if nome_input and area_input:
+            dados_save = {
+                "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, 
+                "area": area_input, "gestor": gestor_input, "periodo": periodo_input, "ano": ano_input
+            }
             salvar_dados_colaborador(nome_input, dados_save)
-            st.success("Autoavaliação salva! Comunique sua gestão.")
+            st.success("Salvo! Avise sua gestão.")
             st.rerun()
         else:
-            st.error("Preencha Nome, Área e a Pergunta Final.")
+            st.error("Preencha Nome e Área.")
 
 elif is_gestora or is_diretora:
     cargo_label = "Gestora" if is_gestora else "Diretora"
     if st.button(f"Finalizar Avaliação como {cargo_label}", type="primary", use_container_width=True):
-        with st.spinner("Gerando PDF e enviando e-mail..."):
-            m_c = sum(notas_colab) / len(notas_colab)
-            m_g = sum(notas_gestor) / len(notas_gestor)
+        with st.spinner("Processando..."):
+            m_c, m_g = sum(notas_colab)/10, sum(notas_gestor)/10
             m_final = (m_c * 0.4) + (m_g * 0.6)
             
             cabecalho = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input}
             pdf_path = gerar_pdf_final(cabecalho, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final, cargo_label)
             
             if enviar_email(nome_input, pdf_path, m_final):
-                st.success(f"Avaliação finalizada! Média Ponderada: {m_final:.2f}")
+                st.success(f"Enviado! Média: {m_final:.2f}")
                 st.balloons()
                 if os.path.exists(pdf_path): os.remove(pdf_path)
-            else:
-                st.error("Falha no envio do e-mail. Verifique as credenciais.")
