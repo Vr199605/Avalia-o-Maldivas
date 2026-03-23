@@ -9,13 +9,12 @@ from email import encoders
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-from reportlab.platypus import Paragraph
-from reportlab.lib.styles import ParagraphStyle
 
-# ========== CONFIGURAÇÕES ==========
-EMAIL_ORIGEM = "seu_email@gmail.com" 
+# ========== CONFIGURAÇÕES (MANTIDAS) ==========
+# ⚠️ IMPORTANTE: A senha abaixo deve ser a "Senha de App" de 16 dígitos gerada no Google.
+EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
 SENHA_APP = "qnml kuiq eenv pcqx" 
-EMAIL_DESTINO = "victormoreiraicnv@gmail.com"
+EMAIL_DESTINO = "victormoreiraicnv@gmail.com" # Destino fixo conforme seu código original
 SENHA_GESTOR = "admin123" 
 PASTA_DADOS = "avaliacoes_salvas"
 
@@ -37,7 +36,7 @@ def carregar_dados_colaborador(nome):
             return json.load(f)
     return None
 
-# ========== GERAR PDF COMPLETO ==========
+# ========== GERAR PDF (MANTENDO ESTRUTURA) ==========
 def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_gestor, dissert, m_final):
     nome_limpo = dados_cabecalho['Nome'].replace(' ', '_')
     arquivo_pdf = f"AVALIACAO_FINAL_{nome_limpo}.pdf"
@@ -47,39 +46,34 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
     y = height - 50
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(width/2, y, "🏝️ RESULTADO FINAL - AVALIAÇÃO MALDIVAS")
+    y -= 40
     
-    y -= 30
     c.setFont("Helvetica-Bold", 10)
     c.drawString(50, y, f"Colaborador: {dados_cabecalho['Nome']} | Área: {dados_cabecalho['Area']}")
     y -= 15
     c.drawString(50, y, f"Gestor: {dados_cabecalho['Gestor']} | Período: {dados_cabecalho['Periodo']}")
     y -= 30
 
-    pergunta_style = ParagraphStyle("P", fontSize=9, leading=11)
-
     for i, p in enumerate(perguntas):
         if y < 100:
             c.showPage()
             y = height - 50
-            
         c.setFont("Helvetica-Bold", 9)
         c.drawString(50, y, f"{i+1}. {p}")
         y -= 15
         c.setFont("Helvetica", 9)
         c.drawString(60, y, f"Nota Colab: {n_colab[i]} | Nota Gestor: {n_gestor[i]}")
         y -= 12
-        
         if j_colab[i]:
             c.setFont("Helvetica-Oblique", 8)
-            c.drawString(60, y, f"Just. Colab: {j_colab[i][:100]}")
+            c.drawString(60, y, f"Just. Colab: {j_colab[i][:90]}...")
             y -= 10
         if j_gestor[i]:
-            c.setFont("Helvetica-Oblique", 8)
             c.setFillColor(colors.blue)
-            c.drawString(60, y, f"Obs Gestor: {j_gestor[i][:100]}")
+            c.drawString(60, y, f"Obs Gestor: {j_gestor[i][:90]}...")
             c.setFillColor(colors.black)
             y -= 10
-        y -= 15
+        y -= 10
 
     y -= 20
     c.setFont("Helvetica-Bold", 12)
@@ -87,23 +81,34 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
     c.save()
     return arquivo_pdf
 
+# ========== ENVIAR E-MAIL (CORRIGIDO) ==========
 def enviar_email(nome, arquivo_pdf, media):
     msg = MIMEMultipart()
     msg["From"] = EMAIL_ORIGEM
     msg["To"] = EMAIL_DESTINO
-    msg["Subject"] = f"Avaliação Concluída - {nome}"
-    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final: {media:.2f}\nPDF em anexo."
+    msg["Subject"] = f"Avaliação Maldivas - {nome}"
+    corpo = f"Avaliação concluída.\nColaborador: {nome}\nMédia Final Ponderada: {media:.2f}\n\nO PDF segue em anexo."
     msg.attach(MIMEText(corpo, "plain"))
+
     try:
         with open(arquivo_pdf, "rb") as f:
             parte = MIMEBase("application", "pdf")
-            parte.set_payload(f.read()); encoders.encode_base64(parte)
+            parte.set_payload(f.read())
+            encoders.encode_base64(parte)
             parte.add_header("Content-Disposition", f"attachment; filename={os.path.basename(arquivo_pdf)}")
             msg.attach(parte)
-        server = smtplib.SMTP("smtp.gmail.com", 587); server.starttls()
-        server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", "")); server.send_message(msg); server.quit()
+
+        # Conexão segura com o Gmail
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        # Remove espaços da senha caso o usuário tenha copiado com espaços
+        server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", "")) 
+        server.send_message(msg)
+        server.quit()
         return True
-    except: return False
+    except Exception as e:
+        st.error(f"Erro técnico no envio: {e}") # Mostra o erro real para diagnóstico
+        return False
 
 # ========== INTERFACE STREAMLIT ==========
 st.set_page_config(page_title="Avaliação Maldivas", layout="wide")
@@ -161,30 +166,37 @@ for i, p in enumerate(perguntas):
     just_colab.append(obs_c); just_gestor.append(obs_g)
 
 v_dissert = dados_existentes['dissert'] if dados_existentes else ""
-dissert_input = st.text_area("Pergunta Final: Como você enxerga seu papel...*", value=v_dissert, disabled=dados_existentes is not None)
+dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=dados_existentes is not None)
 
-# ========== BOTÕES DE AÇÃO (CORRIGIDOS) ==========
+# ========== BOTÕES DE AÇÃO ==========
 if not dados_existentes:
-    if st.button("Enviar minha Autoavaliação", type="primary"):
-        if nome_input and area_input and diss_input:
-            salvar_dados_colaborador(nome_input, {"notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, "area": area_input, "gestor": gestor_input, "periodo": periodo_input})
-            st.success("Salvo! Agora a gestora pode acessar.")
-            st.rerun() # Força a atualização para travar os campos
+    if st.button("Enviar minha Autoavaliação", type="primary", use_container_width=True):
+        if nome_input and area_input and dissert_input:
+            dados_save = {"notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, "area": area_input, "gestor": gestor_input, "periodo": periodo_input}
+            salvar_dados_colaborador(nome_input, dados_save)
+            st.success("Autoavaliação salva! Comunique sua gestora.")
+            st.rerun()
         else:
-            st.error("Preencha os campos obrigatórios.")
+            st.error("Preencha todos os campos antes de enviar.")
 
 elif is_gestora:
-    if st.button("Finalizar Avaliação e Enviar E-mail", type="primary"):
-        with st.spinner("Gerando PDF e enviando..."):
-            m_c = sum(notas_colab) / len(notas_colab)
-            m_g = sum(notas_gestor) / len(notas_gestor)
-            m_final = (m_c * 0.4) + (m_g * 0.6)
+    # O botão agora está dentro do fluxo que garante a execução das funções
+    if st.button("Finalizar Avaliação e Enviar E-mail", type="primary", use_container_width=True):
+        with st.spinner("Processando..."):
+            media_c = sum(notas_colab) / len(notas_colab)
+            media_g = sum(notas_gestor) / len(notas_gestor)
+            media_final = (media_c * 0.4) + (media_g * 0.6)
             
             cabecalho = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input}
-            pdf_path = gerar_pdf_final(cabecalho, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final)
             
-            if enviar_email(nome_input, pdf_path, m_final):
-                st.success(f"Enviado com sucesso! Média: {m_final:.2f}")
-                if os.path.exists(pdf_path): os.remove(pdf_path)
+            # Chama a geração do PDF
+            pdf_gerado = gerar_pdf_final(cabecalho, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_final)
+            
+            # Chama o envio do e-mail
+            if enviar_email(nome_input, pdf_gerado, media_final):
+                st.success(f"Avaliação de {nome_input} enviada com sucesso! Média: {media_final:.2f}")
+                st.balloons()
+                if os.path.exists(pdf_gerado):
+                    os.remove(pdf_gerado)
             else:
-                st.error("Erro no envio do e-mail.")
+                st.error("Falha no envio. Verifique o console ou as configurações de e-mail.")
