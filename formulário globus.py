@@ -13,9 +13,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
 # ========== CONFIGURAÇÕES ==========
-# ⚠️ IMPORTANTE: Use a "Senha de App" de 16 dígitos do Google.
-EMAIL_ORIGEM = "seu_email@gmail.com" 
-SENHA_APP = "abcd efgh ijkl mnop" 
+EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
+SENHA_APP = "hlvu kwvm tyfw pxem" 
 EMAIL_DESTINO = "victormoreiraicnv@gmail.com"
 SENHA_GESTOR = "admin123" 
 SENHA_DIRETORA = "diretoria2026" 
@@ -99,7 +98,7 @@ def enviar_email(nome, arquivo_pdf, media):
     msg["From"] = EMAIL_ORIGEM
     msg["To"] = EMAIL_DESTINO
     msg["Subject"] = f"Avaliação Maldivas Concluída - {nome}"
-    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final Ponderada: {media:.2f}\n\nO PDF detalhado segue em anexo."
+    corpo = f"A avaliação de {nome} foi finalizada.\nMédia Final Ponderada: {media:.2f}"
     msg.attach(MIMEText(corpo, "plain"))
     try:
         with open(arquivo_pdf, "rb") as f:
@@ -145,12 +144,11 @@ with st.sidebar:
             if st.button("Limpar Ciclo (Deletar Tudo)"):
                 for f in glob.glob(os.path.join(PASTA_DADOS, "*.json")):
                     os.remove(f)
-                st.success("Arquivos removidos!")
                 st.rerun()
 
 st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-# Lógica de carregamento de dados
+# Carregamento e Bloqueio
 dados_existentes = carregar_dados_colaborador(nome_para_carregar) if nome_para_carregar else None
 is_bloqueado = dados_existentes is not None
 
@@ -171,7 +169,6 @@ gestor_input = st.text_input("Avaliador Direto*", value=v_gestor, disabled=is_bl
 
 st.divider()
 
-# Perguntas
 perguntas = [
     "Qualidade técnica e precisão nas tarefas operacionais?",
     "Cumprimento de prazos e organização de demandas?",
@@ -208,28 +205,27 @@ for i, p in enumerate(perguntas):
     just_colab.append(obs_c); just_gestor.append(obs_g)
 
 v_dissert = dados_existentes.get('dissert', "") if is_bloqueado else ""
-dissert_input = st.text_area("Visão de Futuro*", value=v_dissert, disabled=is_bloqueado)
+dissert_input = st.text_area("Visão de Futuro / Próximos Passos*", value=v_dissert, disabled=is_bloqueado)
 
 # ========== BOTÕES DE AÇÃO ==========
 if not is_bloqueado:
     if st.button("Enviar minha Autoavaliação", type="primary", use_container_width=True):
-        if not nome_input or not area_input or not dissert_input:
-            st.error("⚠️ Preencha Nome, Área e a Pergunta Final.")
-        else:
+        if nome_input and area_input and dissert_input:
             dados_save = {
                 "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, 
                 "area": area_input, "gestor": gestor_input, "periodo": periodo_input, "ano": ano_input
             }
             salvar_dados_colaborador(nome_input, dados_save)
-            st.success("✅ Salvo com sucesso!")
-            st.balloons()
+            st.success("Salvo! Avise sua gestão.")
             time.sleep(1)
             st.rerun()
+        else:
+            st.error("Preencha Nome, Área e a Visão de Futuro.")
 
 elif is_gestora or is_diretora:
     cargo_label = "Gestora" if is_gestora else "Diretora"
     if st.button(f"Finalizar Avaliação como {cargo_label}", type="primary", use_container_width=True):
-        with st.spinner("Enviando..."):
+        with st.spinner("Processando..."):
             m_c, m_g = sum(notas_colab)/10, sum(notas_gestor)/10
             m_final = (m_c * 0.4) + (m_g * 0.6)
             
@@ -237,8 +233,6 @@ elif is_gestora or is_diretora:
             pdf_path = gerar_pdf_final(cabecalho, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final, cargo_label)
             
             if enviar_email(nome_input, pdf_path, m_final):
-                st.success(f"✅ Enviado! Média: {m_final:.2f}")
+                st.success(f"Finalizado! Média: {m_final:.2f}")
                 st.balloons()
                 if os.path.exists(pdf_path): os.remove(pdf_path)
-            else:
-                st.error("❌ Erro no envio do e-mail.")
