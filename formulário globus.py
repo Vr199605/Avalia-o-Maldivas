@@ -14,8 +14,8 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 
 # ========== CONFIGURAÇÕES ==========
-EMAIL_ORIGEM = "seu_email@gmail.com" 
-SENHA_APP = "abcd efgh ijkl mnop" 
+EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
+SENHA_APP = "hlvu kwvm tyfw pxem" 
 EMAIL_DESTINO = "victormoreiraicnv@gmail.com"
 SENHA_GESTOR = "admin123" 
 SENHA_DIRETORA = "diretoria2026" 
