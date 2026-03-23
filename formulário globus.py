@@ -13,7 +13,7 @@ from reportlab.lib import colors
 # ========== CONFIGURAÇÕES (MANTIDAS) ==========
 # ⚠️ IMPORTANTE: A senha abaixo deve ser a "Senha de App" de 16 dígitos gerada no Google.
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
-SENHA_APP = "qnml kuiq eenv pcqx" 
+SENHA_APP = "hlvu kwvm tyfw pxem" 
 EMAIL_DESTINO = "victormoreiraicnv@gmail.com" # Destino fixo conforme seu código original
 SENHA_GESTOR = "admin123" 
 PASTA_DADOS = "avaliacoes_salvas"
