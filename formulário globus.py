@@ -13,8 +13,8 @@ from reportlab.lib.styles import ParagraphStyle
 
 # ========== CONFIGURAÇÕES ==========
 # ⚠️ SUBSTITUA PELOS SEUS DADOS REAIS
-EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
-SENHA_APP = "alit iufp bzcv vegm" # Insira os 16 dígitos sem espaços
+EMAIL_ORIGEM = "seu_email@gmail.com" 
+SENHA_APP = "qnml kuiq eenv pcqx" # Insira os 16 dígitos sem espaços
 EMAIL_DESTINO = "victormoreiraicnv@gmail.com"
 
 # ========== GERAR PDF ==========
@@ -85,15 +85,14 @@ def enviar_email(nome, arquivo_pdf, media):
             parte.add_header("Content-Disposition", f"attachment; filename={os.path.basename(arquivo_pdf)}")
             msg.attach(parte)
 
-        # Configuração SMTP recomendada (Porta 587)
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
-        server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", "")) # Remove espaços da senha se houver
+        server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", "")) 
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
-        print(f"ERRO DE ENVIO: {e}") # Aparece no terminal do VS Code
+        print(f"ERRO DE ENVIO: {e}") 
         return False
 
 # ========== INTERFACE STREAMLIT ==========
@@ -112,13 +111,17 @@ gestor_input = st.text_input("Gestor Direto*")
 
 st.divider()
 
+# LISTA DE PERGUNTAS ATUALIZADA
 perguntas_texto = [
     "Qualidade técnica e precisão nas tarefas operacionais?",
     "Cumprimento de prazos e organização de demandas?",
     "Proatividade em sugerir melhorias nos processos?",
     "Colaboração e trabalho em equipe?",
     "Resiliência e postura profissional sob pressão?",
-    "Alinhamento com a cultura e valores da empresa?"
+    "Alinhamento com a cultura e valores da empresa?",
+    "Capacidade de aprender e se adaptar a mudanças",
+    "Proatividade na identificação e solução de problemas",
+    "Comunicação clara e eficaz"
 ]
 
 respostas_coletadas = []
@@ -164,6 +167,5 @@ if enviar:
             else:
                 st.error("Erro ao enviar e-mail. Verifique a Senha de App no terminal.")
             
-            # Limpeza de arquivo após tentativa de envio
             if os.path.exists(pdf_path):
                 os.remove(pdf_path)
