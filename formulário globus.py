@@ -16,11 +16,12 @@ from reportlab.lib.utils import ImageReader
 # ========== CONFIGURAÇÕES ==========
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
 SENHA_APP = "hlvu kwvm tyfw pxem" 
-EMAIL_DESTINO = ["victormoreiraicnv@gmail.com"] # Pode adicionar mais aqui
+EMAIL_DESTINO = ["victormoreiraicnv@gmail.com"]
 
 SENHA_GESTOR = "admin123" 
 SENHA_DIRETORA = "diretoria2026" 
 PASTA_DADOS = "avaliacoes_salvas"
+ARQUIVO_LOGO = os.path.join(PASTA_DADOS, "logo_maldivas.png") 
 
 if not os.path.exists(PASTA_DADOS):
     os.makedirs(PASTA_DADOS)
@@ -46,7 +47,7 @@ def listar_avaliacoes_pendentes():
     nomes = [os.path.basename(f).replace(".json", "").replace("_", " ").title() for f in arquivos]
     return sorted(nomes)
 
-# ========== GERAR PDF (LAYOUT PERFEIÇÃO) ==========
+# ========== GERAR PDF (LAYOUT COM LOGO MAIOR) ==========
 def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_gestor, dissert, m_final, cargo_avaliador):
     nome_limpo = dados_cabecalho['Nome'].replace(' ', '_')
     arquivo_pdf = f"AVALIACAO_{nome_limpo}.pdf"
@@ -57,6 +58,14 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
     c.setFillColor(colors.HexColor("#0F172A"))
     c.rect(0, height - 120, width, 120, fill=1, stroke=0)
     
+    # --- Adição da Logo no PDF ---
+    if os.path.exists(ARQUIVO_LOGO):
+        try:
+            logo = ImageReader(ARQUIVO_LOGO)
+            c.drawImage(logo, width - 180, height - 100, width=150, preserveAspectRatio=True, mask='auto')
+        except:
+            pass
+
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 20)
     c.drawString(50, height - 55, "AVALIAÇÃO DE PERFORMANCE")
@@ -129,10 +138,10 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
     # --- Seção Dissertativa ---
     if y < 180: c.showPage(); y = height - 60
     c.setFillColor(colors.HexColor("#F1F5F9"))
-    c.roundRect(50, y - 90, width - 100, 100, 4, fill=1, stroke=0)
+    c.roundRect(50, y - 110, width - 100, 120, 4, fill=1, stroke=0)
     c.setFillColor(colors.HexColor("#0F172A"))
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(60, y - 15, "VISÃO ESTRATÉGICA (CRESCIMENTO E APOIO):")
+    c.drawString(60, y - 15, "VISÃO ESTRATÉGICA E APOIO:")
     y -= 35
     text_obj = c.beginText(60, y)
     text_obj.setFont("Helvetica", 9)
@@ -140,7 +149,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
     text_obj.setLeading(12)
     from textwrap import wrap
     linhas = wrap(dissert, width=105)
-    for linha in linhas[:5]:
+    for linha in linhas[:7]:
         text_obj.textLine(linha)
     c.drawText(text_obj)
 
@@ -181,6 +190,9 @@ def enviar_email(nome, arquivo_pdf, media):
 # ========== INTERFACE STREAMLIT ==========
 st.set_page_config(page_title="Avaliação Maldivas", layout="wide")
 
+if os.path.exists(ARQUIVO_LOGO):
+    st.image(ARQUIVO_LOGO, width=350)
+
 nome_para_carregar = "" 
 
 with st.sidebar:
@@ -203,7 +215,6 @@ with st.sidebar:
 
 st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-# --- LEGENDA DA ESCALA (DESCRIÇÃO GERAL) ---
 with st.expander("ℹ️ LEGENDA DA ESCALA DE AVALIAÇÃO", expanded=True):
     st.markdown("""
     **1 – Muito abaixo do esperado:** desempenho insuficiente, não atende aos requisitos da função.  
@@ -234,88 +245,87 @@ gestor_input = st.text_input("Liderança Direta*", value=v_gestor, disabled=is_b
 
 st.divider()
 
-perguntas = [
-    "Qualidade técnica e precisão nas tarefas operacionais?",
-    "Cumprimento de prazos e organização de demandas?",
-    "Proatividade em sugerir melhorias nos processos?",
-    "Colaboração e trabalho em equipe?",
-    "Resiliência e postura profissional sob pressão?",
-    "Alinhamento com a cultura e valores da empresa?",
-    "Capacidade de aprender e se adaptar a mudanças",
-    "Proatividade na identificação e solução de problemas",
-    "Comunicação clara e eficaz",
-    "Assiduidade, pontualidade e compromisso com a jornada?"
+perguntas_data = [
+    {"pergunta": "Demonstro domínio técnico absoluto e precisão na execução das minhas tarefas operacionais.", "pilar": "Alta performance", "desc": "Excelência técnica: não permite erros básicos e domina as ferramentas de trabalho."},
+    {"pergunta": "Proponho constantemente inovações que otimizam o tempo e os recursos dos processos atuais.", "pilar": "Alta performance", "desc": "Inovação: buscar o 'estado da arte' em tudo o que é executado."},
+    {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpas", "desc": "Comprometimento: sua palavra vale ouro e o prazo é sagrado."},
+    {"pergunta": "Assumo total responsabilidade pelos meus resultados, focando na solução em vez de justificar falhas.", "pilar": "Sem desculpas", "desc": "Autorresponsabilidade: não terceiriza erros para terceiros ou circunstâncias."},
+    {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente/parceiro", "desc": "Valor Extra: ir além do solicitado para encantar quem recebe o serviço."},
+    {"pergunta": "Atuo ativamente na construção de relações sólidas e de confiança no longo prazo.", "pilar": "Foco no cliente/parceiro", "desc": "Relacionamento: construir parcerias que resistem ao tempo e aos desafios."},
+    {"pergunta": "Mantenho rigorosa disciplina e constância na execução das rotinas diárias da empresa.", "pilar": "Obcecados por resultados", "desc": "Consistência: o resultado extraordinário vem da repetição disciplinada do básico."},
+    {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Fome de Crescer: determinação para atingir objetivos ambiciosos."},
+    {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Ownership: agir como dono do negócio, resolvendo o que precisa ser resolvido."},
+    {"pergunta": "Tenho iniciativa para abraçar novos desafios e assumir riscos calculados em prol da empresa.", "pilar": "Postura empreendedora", "desc": "Iniciativa: não espera ordens para agir diante de uma oportunidade de melhoria."},
+    {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Colaboração: ninguém vence sozinho. Se o time ganha, você ganha."},
+    {"pergunta": "Sou capaz de ser firme na defesa dos processos e metas, mantendo total gentileza com as pessoas.", "pilar": "Mentalidade de time", "desc": "Equilíbrio: firmeza com os assuntos e gentileza com as pessoas."}
 ]
 
+perguntas = [item["pergunta"] for item in perguntas_data]
 notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
-# Mapeamento para exibição no selectbox
-escala_nomes = {
-    1: "1 = Insuficiente",
-    2: "2 = Abaixo do esperado",
-    3: "3 = Adequado",
-    4: "4 = Acima do esperado",
-    5: "5 = Destaque"
-}
+escala_nomes = {1: "1 = Insuficiente", 2: "2 = Abaixo do esperado", 3: "3 = Adequado", 4: "4 = Acima do esperado", 5: "5 = Destaque"}
 
-for i, p in enumerate(perguntas):
-    st.subheader(f"{i+1}. {p}")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**Sua Autoavaliação**")
-        v_nota_c = dados_existentes.get('notas_c', [3]*10)[i] if is_bloqueado else 3
-        
-        if is_gestora or is_diretora:
-            st.info("🔒 Nota oculta na tela (Confidencial)")
-            n_c = v_nota_c 
-            obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
-        else:
-            # Selectbox com as descrições das notas
-            n_c_str = st.selectbox(f"Nota", list(escala_nomes.values()), index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
-            n_c = int(n_c_str[0]) # Extrai o número da string
-            
-            v_obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
-            label_just = "Justificativa (Obrigatória para nota 1 ou 5)*" if n_c in [1, 5] else "Justificativa"
-            obs_c = st.text_area(label_just, value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
+for i, item in enumerate(perguntas_data):
+    st.markdown(f"### {i+1}. {item['pergunta']}")
+    st.info(f"**Pilar {item['pilar']}**: {item['desc']}")
     
-    with c2:
+    st.markdown("**Autoavaliação do Colaborador**")
+    v_nota_c = dados_existentes.get('notas_c', [3]*12)[i] if is_bloqueado else 3
+    
+    if is_gestora or is_diretora:
+        st.warning("🔒 Nota Confidencial Oculta")
+        n_c = v_nota_c 
+        obs_c = dados_existentes.get('just_c', [""]*12)[i] if is_bloqueado else ""
+    else:
+        n_c_str = st.selectbox(f"Nível de aderência", list(escala_nomes.values()), index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
+        n_c = int(n_c_str[0])
+        v_obs_c = dados_existentes.get('just_c', [""]*12)[i] if is_bloqueado else ""
+        label_just = "Justificativa Obrigatória (Nota 1 ou 5)*" if n_c in [1, 5] else "Comentários Adicionais"
+        obs_c = st.text_area(label_just, value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
+
+    if is_gestora or is_diretora:
         st.markdown("**Avaliação da Liderança**")
-        n_g_str = st.selectbox(f"Nota Liderança", list(escala_nomes.values()), index=2, key=f"ng_{i}", disabled=not (is_gestora or is_diretora))
+        n_g_str = st.selectbox(f"Nota Liderança", list(escala_nomes.values()), index=2, key=f"ng_{i}")
         n_g = int(n_g_str[0])
-        obs_g = st.text_area(f"Comentário da Gestão", key=f"obsg_{i}", disabled=not (is_gestora or is_diretora))
+        obs_g = st.text_area(f"Feedback Executivo", key=f"obsg_{i}", placeholder="Pontos fortes e melhorias...")
+    else:
+        n_g = 3; obs_g = ""
     
     notas_colab.append(n_c); notas_gestor.append(n_g)
     just_colab.append(obs_c); just_gestor.append(obs_g)
+    st.divider()
 
 v_dissert = dados_existentes.get('dissert', "") if is_bloqueado else ""
 if is_gestora or is_diretora:
-    st.info("📝 Texto estratégico do colaborador será incluído diretamente no PDF.")
+    st.markdown("### 🎯 Visão de Futuro e Suporte")
+    st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=True, height=180)
     dissert_input = v_dissert
 else:
-    dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=is_bloqueado)
+    st.markdown("### 🎯 Visão de Futuro e Suporte")
+    dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=is_bloqueado, height=180)
 
 if not is_bloqueado:
-    if st.button("Finalizar e Enviar Minha Autoavaliação", type="primary", use_container_width=True):
-        faltando_justificativa = False
+    if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
+        faltando_just = False
         for idx, n in enumerate(notas_colab):
             if n in [1, 5] and not just_colab[idx].strip():
-                faltando_justificativa = True
-                st.error(f"Por favor, justifique a nota {n} na pergunta {idx+1}.")
-        
-        if nome_input and area_input and dissert_input and not faltando_justificativa:
+                faltando_just = True
+                st.error(f"⚠️ A afirmação {idx+1} requer justificativa.")
+        if nome_input and area_input and dissert_input and not faltando_just:
             dados_save = {"notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, "area": area_input, "gestor": gestor_input, "periodo": periodo_input, "ano": v_ano}
             salvar_dados_colaborador(nome_input, dados_save)
             st.success("Autoavaliação salva!"); time.sleep(1); st.rerun()
-        elif not faltando_justificativa:
-            st.error("Campos obrigatórios faltando (Nome, Departamento ou Visão Estratégica).")
+        elif not faltando_just:
+            st.error("Preencha todos os campos obrigatórios.")
 
 elif is_gestora or is_diretora:
     label = "Gestora" if is_gestora else "Diretora"
-    if st.button(f"Emitir Relatório Final e Enviar PDF ({label})", type="primary", use_container_width=True):
-        with st.spinner("Gerando relatório..."):
-            m_final = ((sum(notas_colab)/10) * 0.4) + ((sum(notas_gestor)/10) * 0.6)
+    if st.button(f"Gerar Relatório Final e Enviar PDF ({label})", type="primary", use_container_width=True):
+        with st.spinner("Processando..."):
+            m_final = ((sum(notas_colab)/12) * 0.4) + ((sum(notas_gestor)/12) * 0.6)
             cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
+            # CORREÇÃO AQUI: Passando just_colab e just_gestor para a função
             path = gerar_pdf_final(cab, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final, label)
             if enviar_email(nome_input, path, m_final):
-                st.success(f"Relatório enviado com sucesso!"); st.balloons()
+                st.success("Relatório enviado!"); st.balloons()
                 if os.path.exists(path): os.remove(path)
