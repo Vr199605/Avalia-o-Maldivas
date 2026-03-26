@@ -54,7 +54,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
     width, height = A4
     
     # --- Fundo do Cabeçalho ---
-    c.setFillColor(colors.HexColor("#0F172A")) # Azul Navy Profundo
+    c.setFillColor(colors.HexColor("#0F172A"))
     c.rect(0, height - 120, width, 120, fill=1, stroke=0)
     
     c.setFillColor(colors.white)
@@ -88,27 +88,21 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
             c.showPage()
             y = height - 60
             
-        # Título da Pergunta
         c.setFillColor(colors.HexColor("#0F172A"))
         c.setFont("Helvetica-Bold", 10)
         c.drawString(50, y, f"{i+1}. {p}")
         y -= 22
         
-        # Grid de Notas (Barras Visuais)
-        # Nota Colaborador
         c.setFillColor(colors.HexColor("#64748B"))
         c.setFont("Helvetica-Bold", 8)
         c.drawString(60, y, f"AUTOAVALIAÇÃO: {n_colab[i]}")
-        # Desenha barra de progresso nota colab
         c.setFillColor(colors.HexColor("#CBD5E1"))
         c.rect(160, y - 2, 50, 6, fill=1, stroke=0)
         c.setFillColor(colors.HexColor("#64748B"))
         c.rect(160, y - 2, (n_colab[i]/5)*50, 6, fill=1, stroke=0)
 
-        # Nota Gestão
         c.setFillColor(colors.HexColor("#2563EB"))
         c.drawString(240, y, f"NOTA {cargo_avaliador.upper()}: {n_gestor[i]}")
-        # Desenha barra de progresso nota gestão
         c.setFillColor(colors.HexColor("#DBEAFE"))
         c.rect(340, y - 2, 50, 6, fill=1, stroke=0)
         c.setFillColor(colors.HexColor("#2563EB"))
@@ -116,7 +110,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
         
         y -= 15
         
-        # Comentários
         c.setFont("Helvetica-Oblique", 8)
         if j_colab[i]:
             c.setFillColor(colors.HexColor("#64748B"))
@@ -135,40 +128,31 @@ def gerar_pdf_final(dados_cabecalho, perguntas, n_colab, n_gestor, j_colab, j_ge
 
     # --- Seção Dissertativa ---
     if y < 180: c.showPage(); y = height - 60
-    
     c.setFillColor(colors.HexColor("#F1F5F9"))
     c.roundRect(50, y - 90, width - 100, 100, 4, fill=1, stroke=0)
-    
     c.setFillColor(colors.HexColor("#0F172A"))
     c.setFont("Helvetica-Bold", 10)
     c.drawString(60, y - 15, "VISÃO ESTRATÉGICA (CRESCIMENTO E APOIO):")
-    
     y -= 35
     text_obj = c.beginText(60, y)
     text_obj.setFont("Helvetica", 9)
     text_obj.setFillColor(colors.HexColor("#334155"))
     text_obj.setLeading(12)
-    
-    # Quebra de texto automática
     from textwrap import wrap
     linhas = wrap(dissert, width=105)
-    for linha in linhas[:5]: # Limite de 5 linhas no box
+    for linha in linhas[:5]:
         text_obj.textLine(linha)
     c.drawText(text_obj)
 
-    # --- Rodapé com Score Final ---
-    y_footer = 80
+    # --- Rodapé ---
     c.setFillColor(colors.HexColor("#1E293B"))
     c.rect(0, 0, width, 100, fill=1, stroke=0)
-    
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 16)
     c.drawCentredString(width/2, 60, f"SCORE FINAL: {m_final:.2f} / 5.00")
-    
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.HexColor("#94A3B8"))
     c.drawCentredString(width/2, 40, "Este documento é confidencial e propriedade da Maldivas.")
-
     c.save()
     return arquivo_pdf
 
@@ -178,17 +162,14 @@ def enviar_email(nome, arquivo_pdf, media):
     msg["From"] = EMAIL_ORIGEM
     msg["To"] = destinatarios_str
     msg["Subject"] = f"🎯 Avaliação Concluída: {nome}"
-    
     corpo = f"Prezados,\n\nRelatório de Performance de {nome} gerado.\nScore Final: {media:.2f}\n\nO anexo contém o detalhamento visual completo."
     msg.attach(MIMEText(corpo, "plain"))
-    
     try:
         with open(arquivo_pdf, "rb") as f:
             parte = MIMEBase("application", "pdf")
             parte.set_payload(f.read()); encoders.encode_base64(parte)
             parte.add_header("Content-Disposition", f"attachment; filename={os.path.basename(arquivo_pdf)}")
             msg.attach(parte)
-        
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.ehlo(); server.starttls(); server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", ""))
         server.send_message(msg); server.quit()
@@ -215,7 +196,6 @@ with st.sidebar:
         if lista_pendentes:
             selecionado = st.selectbox("Escolha o Colaborador:", [""] + lista_pendentes)
             if selecionado: nome_para_carregar = selecionado
-        
         if is_diretora:
             if st.button("🔥 Resetar Ciclo"):
                 for f in glob.glob(os.path.join(PASTA_DADOS, "*.json")): os.remove(f)
@@ -223,7 +203,17 @@ with st.sidebar:
 
 st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-# Dados e Bloqueio
+# --- LEGENDA DA ESCALA (DESCRIÇÃO GERAL) ---
+with st.expander("ℹ️ LEGENDA DA ESCALA DE AVALIAÇÃO", expanded=True):
+    st.markdown("""
+    **1 – Muito abaixo do esperado:** desempenho insuficiente, não atende aos requisitos da função.  
+    **2 – Abaixo do esperado:** atende parcialmente, com necessidade frequente de orientação.  
+    **3 – Atende plenamente:** cumpre o que é esperado para a função.  
+    **4 – Supera expectativas:** desempenho acima do esperado de forma consistente.  
+    **5 – Destaque:** desempenho excepcional, referência para o time.  
+    \**Campo obrigatório quando a avaliação dada for 1 ou 5*
+    """)
+
 dados_existentes = carregar_dados_colaborador(nome_para_carregar) if nome_para_carregar else None
 is_bloqueado = dados_existentes is not None
 
@@ -259,45 +249,73 @@ perguntas = [
 
 notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
+# Mapeamento para exibição no selectbox
+escala_nomes = {
+    1: "1 = Insuficiente",
+    2: "2 = Abaixo do esperado",
+    3: "3 = Adequado",
+    4: "4 = Acima do esperado",
+    5: "5 = Destaque"
+}
+
 for i, p in enumerate(perguntas):
     st.subheader(f"{i+1}. {p}")
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("**Sua Autoavaliação**")
         v_nota_c = dados_existentes.get('notas_c', [3]*10)[i] if is_bloqueado else 3
-        n_c = st.selectbox(f"Nota", [1,2,3,4,5], index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
-        v_obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
-        obs_c = st.text_area(f"Justificativa", value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado) if n_c in [1, 5] else ""
+        
+        if is_gestora or is_diretora:
+            st.info("🔒 Nota oculta na tela (Confidencial)")
+            n_c = v_nota_c 
+            obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
+        else:
+            # Selectbox com as descrições das notas
+            n_c_str = st.selectbox(f"Nota", list(escala_nomes.values()), index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
+            n_c = int(n_c_str[0]) # Extrai o número da string
+            
+            v_obs_c = dados_existentes.get('just_c', [""]*10)[i] if is_bloqueado else ""
+            label_just = "Justificativa (Obrigatória para nota 1 ou 5)*" if n_c in [1, 5] else "Justificativa"
+            obs_c = st.text_area(label_just, value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
     
     with c2:
         st.markdown("**Avaliação da Liderança**")
-        n_g = st.selectbox(f"Nota Liderança", [1,2,3,4,5], index=2, key=f"ng_{i}", disabled=not (is_gestora or is_diretora))
+        n_g_str = st.selectbox(f"Nota Liderança", list(escala_nomes.values()), index=2, key=f"ng_{i}", disabled=not (is_gestora or is_diretora))
+        n_g = int(n_g_str[0])
         obs_g = st.text_area(f"Comentário da Gestão", key=f"obsg_{i}", disabled=not (is_gestora or is_diretora))
     
     notas_colab.append(n_c); notas_gestor.append(n_g)
     just_colab.append(obs_c); just_gestor.append(obs_g)
 
 v_dissert = dados_existentes.get('dissert', "") if is_bloqueado else ""
-dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=is_bloqueado)
+if is_gestora or is_diretora:
+    st.info("📝 Texto estratégico do colaborador será incluído diretamente no PDF.")
+    dissert_input = v_dissert
+else:
+    dissert_input = st.text_area("Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*", value=v_dissert, disabled=is_bloqueado)
 
-# ========== BOTÕES ==========
 if not is_bloqueado:
     if st.button("Finalizar e Enviar Minha Autoavaliação", type="primary", use_container_width=True):
-        if nome_input and area_input and dissert_input:
+        faltando_justificativa = False
+        for idx, n in enumerate(notas_colab):
+            if n in [1, 5] and not just_colab[idx].strip():
+                faltando_justificativa = True
+                st.error(f"Por favor, justifique a nota {n} na pergunta {idx+1}.")
+        
+        if nome_input and area_input and dissert_input and not faltando_justificativa:
             dados_save = {"notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input, "area": area_input, "gestor": gestor_input, "periodo": periodo_input, "ano": v_ano}
             salvar_dados_colaborador(nome_input, dados_save)
-            st.success("Autoavaliação salva! Aguarde o feedback da gestão.")
-            time.sleep(1); st.rerun()
-        else:
-            st.error("Campos obrigatórios faltando.")
+            st.success("Autoavaliação salva!"); time.sleep(1); st.rerun()
+        elif not faltando_justificativa:
+            st.error("Campos obrigatórios faltando (Nome, Departamento ou Visão Estratégica).")
 
 elif is_gestora or is_diretora:
     label = "Gestora" if is_gestora else "Diretora"
     if st.button(f"Emitir Relatório Final e Enviar PDF ({label})", type="primary", use_container_width=True):
-        with st.spinner("Compilando dados visuais..."):
+        with st.spinner("Gerando relatório..."):
             m_final = ((sum(notas_colab)/10) * 0.4) + ((sum(notas_gestor)/10) * 0.6)
             cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
             path = gerar_pdf_final(cab, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final, label)
             if enviar_email(nome_input, path, m_final):
-                st.success(f"Relatório enviado para a diretoria!"); st.balloons()
+                st.success(f"Relatório enviado com sucesso!"); st.balloons()
                 if os.path.exists(path): os.remove(path)
