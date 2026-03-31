@@ -16,7 +16,7 @@ from reportlab.lib.utils import ImageReader
 # ========== CONFIGURAÇÕES ==========
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
 SENHA_APP = "hlvu kwvm tyfw pxem" 
-EMAIL_DESTINO = ["victormoreiraicnv@gmail.com","roberta.borio@globusseguros.com.br]
+EMAIL_DESTINO = ["victormoreiraicnv@gmail.com","roberta.borio@globusseguros.com.br"]
 
 SENHA_GESTOR = "admin123" 
 SENHA_DIRETORA = "diretoria2026" 
