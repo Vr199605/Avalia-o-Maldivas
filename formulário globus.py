@@ -16,7 +16,7 @@ from reportlab.lib.utils import ImageReader
 # ========== CONFIGURAÇÕES ==========
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com" 
 SENHA_APP = "hlvu kwvm tyfw pxem" 
-EMAIL_DESTINO = ["victormoreiraicnv@gmail.com"]
+EMAIL_DESTINO = ["victormoreiraicnv@gmail.com","roberta.borio@globusseguros.com.br]
 
 SENHA_GESTOR = "admin123" 
 SENHA_DIRETORA = "diretoria2026" 
@@ -257,7 +257,7 @@ perguntas_data = [
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Ownership: agir como dono do negócio, resolvendo o que precisa ser resolvido."},
     {"pergunta": "Tenho iniciativa para abraçar novos desafios e assumir riscos calculados em prol da empresa.", "pilar": "Postura empreendedora", "desc": "Iniciativa: não espera ordens para agir diante de uma oportunidade de melhoria."},
     {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Colaboração: ninguém vence sozinho. Se o time ganha, você ganha."},
-    {"pergunta": "Sou capaz de ser firme na defesa dos processos e metas, mantendo total gentileza com as pessoas.", "pilar": "Mentalidade de time", "desc": "Equilíbrio: firmeza com os assuntos e gentileza com as pessoas."}
+    {"pergunta": "Possuo postura profissional na defesa dos processos e metas, mantendo alinhamento com os valores da empresa.", "pilar": "Mentalidade de time", "desc": "Equilíbrio: firmeza com os assuntos e gentileza com as pessoas."}
 ]
 
 perguntas = [item["pergunta"] for item in perguntas_data]
