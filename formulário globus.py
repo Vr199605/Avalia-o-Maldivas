@@ -246,40 +246,22 @@ gestor_input = st.text_input("Liderança Direta*", value=v_gestor, disabled=is_b
 st.divider()
 
 perguntas_data = [
-    {"pergunta": "Demonstro domínio técnico absoluto e precisão na execução das minhas tarefas operacionais.", "pilar": "Alta performance", "desc": "Excelência técnica: não permite erros básicos e domina as ferramentas de trabalho."},
-    {"pergunta": "Busca melhoria contínua ou se acomoda?", "pilar": "Alta performance", "desc": "Inquietude positiva para evoluir sempre."},
-    {"pergunta": "Eleva o nível do time?", "pilar": "Alta performance", "desc": "Sua presença torna os outros melhores."},
-    {"pergunta": "Entrega acima do esperado?", "pilar": "Alta performance", "desc": "Superação constante de metas e expectativas."},
-    {"pergunta": "Proponho constantemente inovações que otimizam o tempo e os recursos dos processos atuais.", "pilar": "Alta performance", "desc": "Inovação: buscar o 'estado da arte' em tudo o que é executado."},
-    {"pergunta": "Assume erros rapidamente?", "pilar": "Ownership", "desc": "Transparência e velocidade na correção de rotas."},
-    {"pergunta": "Resolve problemas ou transfere?", "pilar": "Ownership", "desc": "Foco na solução definitiva."},
-    {"pergunta": "Age como dono?", "pilar": "Ownership", "desc": "Zelo e responsabilidade total pelo negócio."},
-    {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpas", "desc": "Comprometimento: sua palavra vale ouro e o prazo é sagrado."},
-    {"pergunta": "Assumo total responsabilidade pelos meus resultados, focando na solução em vez de justificar falhas.", "pilar": "Sem desculpas", "desc": "Autorresponsabilidade: não terceiriza erros para terceiros ou circunstâncias."},
-    {"pergunta": "Prioriza o cliente nas decisões?", "pilar": "Cliente no Centro", "desc": "O cliente é a bússola das ações."},
-    {"pergunta": "Entende impacto do trabalho no cliente?", "pilar": "Cliente no Centro", "desc": "Visão clara da jornada do usuário final."},
-    {"pergunta": "Gera valor real ou só executa tarefa?", "pilar": "Cliente no Centro", "desc": "Foco no impacto e não apenas no checklist."},
-    {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente/parceiro", "desc": "Valor Extra: ir além do solicitado para encantar quem recebe o serviço."},
-    {"pergunta": "Atuo ativamente na construção de relações sólidas e de confiança no longo prazo.", "pilar": "Foco no cliente/parceiro", "desc": "Relacionamento: construir parcerias que resistem ao tempo e aos desafios."},
-    {"pergunta": "Cumpre metas com consistência?", "pilar": "Resultado & Execução", "desc": "Entrega previsível e de alta qualidade."},
-    {"pergunta": "Tem disciplina operacional?", "pilar": "Resultado & Execução", "desc": "Rigor nos processos e métodos."},
-    {"pergunta": "Faz acontecer mesmo com obstáculos?", "pilar": "Resultado & Execução", "desc": "Resiliência e foco na entrega final."},
-    {"pergunta": "Mantenho rigorosa disciplina e constância na execução das rotinas diárias da empresa.", "pilar": "Obcecados por resultados", "desc": "Consistência: o resultado extraordinário vem da repetição disciplinada do básico."},
-    {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Fome de Crescer: determinação para atingir objetivos ambiciosos."},
-    {"pergunta": "Toma iniciativa sem precisar mandar?", "pilar": "Postura Empreendedora", "desc": "Proatividade real no dia a dia."},
-    {"pergunta": "Propõe soluções?", "pilar": "Postura Empreendedora", "desc": "Mentalidade voltada para melhorias."},
-    {"pergunta": "Assume riscos inteligentes?", "pilar": "Postura Empreendedora", "desc": "Coragem calculada para inovar."},
-    {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Ownership: agir como dono do negócio, resolvendo o que precisa ser resolvido."},
-    {"pergunta": "Tenho iniciativa para abraçar novos desafios e assumir riscos calculados em prol da empresa.", "pilar": "Postura empreendedora", "desc": "Iniciativa: não espera ordens para agir diante de uma oportunidade de melhoria."},
-    {"pergunta": "Colabora ou compete internamente?", "pilar": "Mentalidade de Time", "desc": "Foco no sucesso do grupo."},
-    {"pergunta": "Eleva as pessoas ao redor?", "pilar": "Mentalidade de Time", "desc": "Incentiva e apoia o crescimento dos colegas."},
-    {"pergunta": "Tem postura madura e respeitosa?", "pilar": "Mentalidade de Time", "desc": "Inteligência emocional e ética."},
-    {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Colaboração: ninguém vence sozinho. Se o time ganha, você ganha."},
-    {"pergunta": "Possuo postura profissional na defesa dos processos e metas, mantendo alinhamento com os valores da empresa.", "pilar": "Mentalidade de time", "desc": "Equilíbrio: firmeza com os assuntos e gentileza com as pessoas."}
+    {"pergunta": "Busca melhoria contínua e domínio técnico, elevando o nível das entregas e do time?", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
+    {"pergunta": "Demonstro domínio técnico absoluto e precisão na execução das minhas tarefas operacionais.", "pilar": "Alta performance", "desc": "Precisão e domínio das ferramentas de trabalho."},
+    {"pergunta": "Assume erros e problemas agindo com postura de dono ou transfere para os outros?", "pilar": "Sem desculpa", "desc": "Autorresponsabilidade e foco total na solução rápida."},
+    {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
+    {"pergunta": "Prioriza o cliente nas decisões, entendendo o impacto real do seu trabalho no cliente/parceiro?", "pilar": "Foco no cliente/parceiro", "desc": "Gerar valor real e construir relações de confiança."},
+    {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente/parceiro", "desc": "Encantamento e visão de longo prazo na parceria."},
+    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e superar obstáculos?", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
+    {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
+    {"pergunta": "Toma iniciativa e propõe soluções com autonomia, assumindo riscos inteligentes?", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
+    {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
+    {"pergunta": "Colabora ativamente, eleva as pessoas ao redor e mantém postura madura e respeitosa?", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
+    {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Espírito de equipe e apoio mútuo para vencer."}
 ]
 
 perguntas = [item["pergunta"] for item in perguntas_data]
-num_total_perguntas = len(perguntas)
+num_total = len(perguntas)
 notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
 escala_nomes = {1: "1 = Insuficiente", 2: "2 = Abaixo do esperado", 3: "3 = Adequado", 4: "4 = Acima do esperado", 5: "5 = Destaque"}
@@ -289,16 +271,16 @@ for i, item in enumerate(perguntas_data):
     st.info(f"**Pilar {item['pilar']}**: {item['desc']}")
     
     st.markdown("**Autoavaliação do Colaborador**")
-    v_nota_c = dados_existentes.get('notas_c', [3]*num_total_perguntas)[i] if is_bloqueado else 3
+    v_nota_c = dados_existentes.get('notas_c', [3]*num_total)[i] if is_bloqueado else 3
     
     if is_gestora or is_diretora:
         st.warning("🔒 Nota Confidencial Oculta")
         n_c = v_nota_c 
-        obs_c = dados_existentes.get('just_c', [""]*num_total_perguntas)[i] if is_bloqueado else ""
+        obs_c = dados_existentes.get('just_c', [""]*num_total)[i] if is_bloqueado else ""
     else:
         n_c_str = st.selectbox(f"Nível de aderência", list(escala_nomes.values()), index=v_nota_c-1, key=f"nc_{i}", disabled=is_bloqueado)
         n_c = int(n_c_str[0])
-        v_obs_c = dados_existentes.get('just_c', [""]*num_total_perguntas)[i] if is_bloqueado else ""
+        v_obs_c = dados_existentes.get('just_c', [""]*num_total)[i] if is_bloqueado else ""
         label_just = "Justificativa Obrigatória (Nota 1 ou 5)*" if n_c in [1, 5] else "Comentários Adicionais"
         obs_c = st.text_area(label_just, value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
 
@@ -341,9 +323,8 @@ elif is_gestora or is_diretora:
     label = "Gestora" if is_gestora else "Diretora"
     if st.button(f"Gerar Relatório Final e Enviar PDF ({label})", type="primary", use_container_width=True):
         with st.spinner("Processando..."):
-            m_final = ((sum(notas_colab)/num_total_perguntas) * 0.4) + ((sum(notas_gestor)/num_total_perguntas) * 0.6)
+            m_final = ((sum(notas_colab)/num_total) * 0.4) + ((sum(notas_gestor)/num_total) * 0.6)
             cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
-            # CORREÇÃO AQUI: Passando just_colab e just_gestor para a função
             path = gerar_pdf_final(cab, perguntas, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, m_final, label)
             if enviar_email(nome_input, path, m_final):
                 st.success("Relatório enviado!"); st.balloons()
