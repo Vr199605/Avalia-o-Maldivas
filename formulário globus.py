@@ -314,10 +314,11 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             if y < 150:
                 y = nova_pagina()
 
+            # CORRIGIDO: Modificado 'color=COR_TEXTO' para 'cor=COR_TEXTO' para sanar o TypeError
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
-                fonte=F_BOLD, tamanho=9.5, color=COR_TEXTO, contexto=ctx,
+                fonte=F_BOLD, tamanho=9.5, cor=COR_TEXTO, contexto=ctx,
             )
             y -= 6
 
@@ -346,7 +347,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                 y = texto_multilinha(
                     c, f"Just. colaborador: {j_colab[i]}", 64, y,
                     largura_chars=118, leading=11,
-                    fonte=F_ITALIC, tamanho=8, color=COR_CINZA, contexto=ctx,
+                    fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
                 )
             
             # Comentários do gestor (SÓ NO PDF DO GESTOR)
@@ -354,7 +355,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                 y = texto_multilinha(
                     c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
                     largura_chars=118, leading=11,
-                    fonte=F_ITALIC, tamanho=8, color=COR_PRIMARIA, contexto=ctx,
+                    fonte=F_ITALIC, tamanho=8, cor=COR_PRIMARIA, contexto=ctx,
                 )
             y -= 14
 
@@ -394,7 +395,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
     y = texto_multilinha(
         c, dissert or "Não informado.", 64, y,
         largura_chars=100, leading=12,
-        fonte=F_REGULAR, tamanho=9, color=COR_TEXTO_SUAVE, contexto=ctx, min_y=80,
+        fonte=F_REGULAR, tamanho=9, cor=COR_TEXTO_SUAVE, contexto=ctx, min_y=80,
     )
 
     _rodape(c, width, estado["pagina"])
@@ -477,7 +478,6 @@ def main():
             st.divider()
             lista_pendentes = listar_avaliacoes_pendentes()
             if lista_pendentes:
-                # Filtragem visual apenas por segurança opcional baseada nos nomes do departamento se necessário
                 selecionado = st.selectbox("Escolha o Colaborador:", [""] + lista_pendentes)
                 if selecionado:
                     nome_para_carregar = selecionado
@@ -603,7 +603,6 @@ def main():
         st.markdown("### 📊 Consolidação dos Resultados")
         
         if is_gestao:
-            # Exibe a média aritmética do colaborador e do gestor na visão do gestor
             st.metric("Média Aritmética (Autoavaliação)", f"{media_colab:.2f} / 5.00")
             st.metric("Média Aritmética (Liderança)", f"{media_gestor:.2f} / 5.00")
         else:
@@ -639,7 +638,6 @@ def main():
                     }
                     salvar_dados_colaborador(nome_input, dados_save)
                     
-                    # Dispara o e-mail contendo o link da aplicação para o gestor cadastrado
                     enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/")
                     st.success("Autoavaliação salva com sucesso e e-mail enviado ao gestor!")
                     time.sleep(1)
@@ -647,7 +645,6 @@ def main():
                 elif not faltando_just:
                     st.error("Preencha todos os campos obrigatórios (verifique se deixou categorias vazias ou sem preencher seu texto de visão de futuro).")
         else:
-            # Ambos conseguem baixar PDFs, mas com restrições de visibilidade de conteúdo
             st.markdown("### 📄 Downloads Disponíveis")
             cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
             
