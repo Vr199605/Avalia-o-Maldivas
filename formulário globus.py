@@ -28,6 +28,9 @@ from reportlab.pdfbase.ttfonts import TTFont
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com"
 SENHA_APP = "hlvu kwvm tyfw pxem"
 
+# As senhas foram alteradas conforme solicitado
+SENHA_FINANCEIRO = "financeiro2026"
+SENHA_BENEFICIOS = "beneficios2026"
 PASTA_DADOS = "avaliacoes_salvas"
 PASTA_FONTES = os.path.join(PASTA_DADOS, "fontes")
 ARQUIVO_LOGO = os.path.join(PASTA_DADOS, "logo_maldivas.png")
@@ -115,7 +118,7 @@ def listar_avaliacoes_pendentes():
 
 # ========== GERAÇÃO DO GRÁFICO RADAR (matplotlib) ==========
 def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, modo_gestor=False):
-    """Radar de autoavaliação por pilar."""
+    """Radar comparando autoavaliação x liderança por pilar."""
     n = len(pilares)
     angulos = [i / n * 2 * math.pi for i in range(n)]
     angulos += angulos[:1]
@@ -138,8 +141,16 @@ def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, modo_gestor=False
     ax.spines["polar"].set_color("#E2E8F0")
     ax.grid(color="#E2E8F0")
 
-    ax.plot(angulos, vc, color="#2563EB", linewidth=2, label="Autoavaliação")
-    ax.fill(angulos, vc, color="#2563EB", alpha=0.18)
+    # Se for modo gestor, renderiza o comparativo, se for colaborador renderiza apenas notas dele
+    if modo_gestor:
+        vg = vals_gestor + vals_gestor[:1]
+        ax.plot(angulos, vg, color="#2563EB", linewidth=2, label="Liderança")
+        ax.fill(angulos, vg, color="#2563EB", alpha=0.18)
+        ax.plot(angulos, vc, color="#64748B", linewidth=2, linestyle="--", label="Autoavaliação")
+        ax.fill(angulos, vc, color="#64748B", alpha=0.10)
+    else:
+        ax.plot(angulos, vc, color="#64748B", linewidth=2, label="Autoavaliação")
+        ax.fill(angulos, vc, color="#64748B", alpha=0.15)
 
     ax.legend(loc="upper right", bbox_to_anchor=(1.15, 1.12), frameon=False, fontsize=10)
     plt.tight_layout()
@@ -150,7 +161,7 @@ def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, modo_gestor=False
 def _rodape(c, width, num_pagina):
     c.setFillColor(COR_CINZA_CLARO)
     c.setFont(F_REGULAR, 7)
-    c.drawString(50, 25, "Documento confidencial · propriedade da Globus Seguros")
+    c.drawString(50, 25, "Documento confidencial · propriedade da Maldivas")
     c.drawRightString(width - 50, 25, f"Página {num_pagina}")
     c.setStrokeColor(COR_TRILHO)
     c.setLineWidth(0.5)
@@ -214,12 +225,14 @@ def medidor_score(c, cx, cy, raio, score, esp=14):
     c.drawCentredString(cx, cy - raio * 0.55, "de 5.00")
 
 # ========== GERAR PDF ==========
-def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, j_colab, j_gestor, dissert, m_final, modo_gestor=False):
+def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
+                    j_colab, j_gestor, dissert, m_final, cargo_avaliador, modo_gestor=False):
     nome_limpo = _slug(dados_cabecalho["Nome"])
-    arquivo_pdf = f"AVALIACAO_{nome_limpo}_{'GESTOR' if modo_gestor else 'COLABORADOR'}.pdf"
+    suffix = "GESTOR" if modo_gestor else "COLABORADOR"
+    arquivo_pdf = f"AVALIACAO_{nome_limpo}_{suffix}.pdf"
     c = canvas.Canvas(arquivo_pdf, pagesize=A4)
     width, height = A4
-    ciclo = f"Ciclo Globus Seguros | {dados_cabecalho['Periodo']} {dados_cabecalho['Ano']}"
+    ciclo = f"Ciclo Maldivas | {dados_cabecalho['Periodo']} {dados_cabecalho['Ano']}"
 
     estado = {"pagina": 1}
 
@@ -261,13 +274,14 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, j_colab, j_gestor,
     c.setFillColor(COR_CINZA_CLARO)
     c.setFont(F_REGULAR, 12)
     c.drawCentredString(width / 2, height - 585, f"{dados_cabecalho['Area'].upper()}")
-    c.drawCentredString(width / 2, height - 605, f"Liderança Direta: {dados_cabecalho['Gestor']}")
+    c.drawCentredString(width / 2, height - 605, f"Avaliador(a): {dados_cabecalho['Gestor']}")
     c.setFont(F_REGULAR, 9)
     c.setFillColor(COR_CINZA)
     c.drawCentredString(width / 2, 50, f"Relatório gerado em {time.strftime('%d/%m/%Y às %H:%M')}")
 
     y = nova_pagina()
 
+    # ---------- PÁGINAS DE CONTEÚDO: AGRUPADO POR PILAR ----------
     ctx = {"nova_pagina": nova_pagina}
 
     pilares_ordem = []
@@ -284,15 +298,16 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, j_colab, j_gestor,
         if y < 170:
             y = nova_pagina()
 
-        media_pilar_c = sum(n_colab[i] for i in indices) / len(indices)
+        # Média aritmética baseada em quem está visualizando ou nas notas dadas
+        media_pilar = sum(n_gestor[i] if modo_gestor else n_colab[i] for i in indices) / len(indices)
         c.setFillColor(COR_FUNDO_ESCURO)
         c.roundRect(50, y - 8, width - 100, 30, 5, fill=1, stroke=0)
         c.setFillColor(COR_BRANCO)
         c.setFont(F_BOLD, 12)
         c.drawString(64, y, pil.upper())
-        c.setFillColor(cor_da_nota(round(media_pilar_c)))
+        c.setFillColor(cor_da_nota(round(media_pilar)))
         c.setFont(F_BLACK, 13)
-        c.drawRightString(width - 64, y, f"{media_pilar_c:.1f}")
+        c.drawRightString(width - 64, y, f"{media_pilar:.1f}")
         y -= 34
 
         for i in indices:
@@ -302,46 +317,60 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, j_colab, j_gestor,
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
-                fonte=F_BOLD, tamanho=9.5, cor=COR_TEXTO, contexto=ctx,
+                fonte=F_BOLD, tamanho=9.5, color=COR_TEXTO, contexto=ctx,
             )
             y -= 6
 
+            # Linha autoavaliação sempre visível
             c.setFont(F_BOLD, 8)
-            c.setFillColor(COR_PRIMARIA)
-            c.drawString(64, y, "Nota Atribuída")
-            barra(c, 150, y - 1, 120, n_colab[i], COR_PRIMARIA)
+            c.setFillColor(COR_CINZA)
+            c.drawString(64, y, "Autoavaliação")
+            barra(c, 150, y - 1, 120, n_colab[i], COR_CINZA)
             c.setFillColor(cor_da_nota(n_colab[i]))
             c.setFont(F_BOLD, 9)
             c.drawString(278, y, str(n_colab[i]))
             y -= 16
 
+            # Linha liderança (SÓ NO PDF DO GESTOR)
+            if modo_gestor:
+                c.setFont(F_BOLD, 8)
+                c.setFillColor(COR_PRIMARIA)
+                c.drawString(64, y, cargo_avaliador)
+                barra(c, 150, y - 1, 120, n_gestor[i], COR_PRIMARIA, cor_trilho=COR_PRIMARIA_CLARA)
+                c.setFillColor(cor_da_nota(n_gestor[i]))
+                c.setFont(F_BOLD, 9)
+                c.drawString(278, y, str(n_gestor[i]))
+                y -= 18
+
             if j_colab[i]:
                 y = texto_multilinha(
-                    c, f"Justificativa: {j_colab[i]}", 64, y,
+                    c, f"Just. colaborador: {j_colab[i]}", 64, y,
                     largura_chars=118, leading=11,
-                    fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
+                    fonte=F_ITALIC, tamanho=8, color=COR_CINZA, contexto=ctx,
                 )
             
+            # Comentários do gestor (SÓ NO PDF DO GESTOR)
             if modo_gestor and j_gestor[i]:
                 y = texto_multilinha(
-                    c, f"Feedback do Gestor: {j_gestor[i]}", 64, y,
+                    c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
                     largura_chars=118, leading=11,
-                    fonte=F_ITALIC, tamanho=8, cor=colors.HexColor("#DC2626"), contexto=ctx,
+                    fonte=F_ITALIC, tamanho=8, color=COR_PRIMARIA, contexto=ctx,
                 )
             y -= 14
 
-    # ---------- RADAR ----------
+    # ---------- RADAR DOS PILARES ----------
     radar_png = os.path.join(PASTA_DADOS, f"_radar_{nome_limpo}.png")
     vals_colab = [sum(n_colab[i] for i in grupos[p]) / len(grupos[p]) for p in pilares_ordem]
+    vals_gestor = [sum(n_gestor[i] for i in grupos[p]) / len(grupos[p]) for p in pilares_ordem]
     try:
-        gerar_radar(pilares_ordem, vals_colab, [], radar_png, modo_gestor)
+        gerar_radar(pilares_ordem, vals_colab, vals_gestor, radar_png, modo_gestor=modo_gestor)
         y = nova_pagina()
         c.setFillColor(COR_TEXTO)
         c.setFont(F_BOLD, 14)
         c.drawString(50, y, "VISÃO GERAL POR PILAR")
         c.setFillColor(COR_CINZA)
         c.setFont(F_REGULAR, 9)
-        c.drawString(50, y - 16, "Mapeamento das competências avaliadas.")
+        c.drawString(50, y - 16, "Acompanhamento de notas por pilar estratégico.")
         img = ImageReader(radar_png)
         iw, ih = img.getSize()
         disp_w = 380
@@ -365,7 +394,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, j_colab, j_gestor,
     y = texto_multilinha(
         c, dissert or "Não informado.", 64, y,
         largura_chars=100, leading=12,
-        fonte=F_REGULAR, tamanho=9, cor=COR_TEXTO_SUAVE, contexto=ctx, min_y=80,
+        fonte=F_REGULAR, tamanho=9, color=COR_TEXTO_SUAVE, contexto=ctx, min_y=80,
     )
 
     _rodape(c, width, estado["pagina"])
@@ -375,16 +404,15 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, j_colab, j_gestor,
         os.remove(radar_png)
     return arquivo_pdf
 
-def enviar_email_notificacao(nome, email_gestor):
+def enviar_email(nome, email_gestor, link_app):
     msg = MIMEMultipart()
     msg["From"] = EMAIL_ORIGEM
     msg["To"] = email_gestor
-    msg["Subject"] = f"🎯 Nova Avaliação de Performance Submetida: {nome}"
+    msg["Subject"] = f"🎯 Avaliação de Desempenho Pendente: {nome}"
     corpo = (
-        f"Olá,\n\nO colaborador {nome} concluiu a sua autoavaliação de performance.\n\n"
-        f"Por favor, acesse o link abaixo para visualizar as notas, adicionar seus feedbacks e baixar a versão final em PDF:\n"
-        f"https://6gxzkzhhzmceshkaojrpb7.streamlit.app/\n\n"
-        f"Atenciosamente,\nSistema de Avaliações Globus"
+        f"Olá,\n\nO colaborador {nome} concluiu a autoavaliação de desempenho.\n"
+        f"Para visualizar as notas, adicionar seus feedbacks e baixar os relatórios, acesse o portal pelo link abaixo:\n\n"
+        f"{link_app}\n\nUtilize a senha do seu departamento para acessar as funcionalidades do gestor."
     )
     msg.attach(MIMEText(corpo, "plain"))
     try:
@@ -396,7 +424,7 @@ def enviar_email_notificacao(nome, email_gestor):
         server.quit()
         return True
     except (smtplib.SMTPException, OSError) as e:
-        st.error(f"Erro no envio do e-mail de notificação: {e}")
+        st.error(f"Erro no envio de e-mail de notificação para o gestor: {e}")
         return False
 
 # ========== DADOS DAS PERGUNTAS ==========
@@ -427,57 +455,47 @@ escala_nomes = {
 
 # ========== INTERFACE STREAMLIT ==========
 def main():
-    st.set_page_config(page_title="Avaliação Globus Seguros", layout="wide")
+    st.set_page_config(page_title="Avaliação Maldivas", layout="wide")
     configurar_fontes()
 
     if os.path.exists(ARQUIVO_LOGO):
         st.image(ARQUIVO_LOGO, width=350)
 
     nome_para_carregar = ""
-    is_gestora = False
-    is_diretora = False
 
     with st.sidebar:
-        st.header("🔐 Portal de Liderança")
-        senha_input = st.text_input("Credencial do Gestor", type="password")
+        st.header("🔐 Portal Administrativo")
+        senha_input = st.text_input("Credencial", type="password")
         
-        # Definição dinâmica das permissões baseada na senha solicitada
-        if senha_input == "financeiro2026":
-            is_gestora = True
-            dep_permissao = "Financeiro"
-            st.success("Acesso: Gestão Financeira")
-        elif senha_input == "beneficios2026":
-            is_gestora = True
-            dep_permissao = "Benefícios"
-            st.success("Acesso: Gestão Benefícios")
-            
-        if is_gestora:
+        # Gerenciamento de acessos via novas senhas de departamentos
+        is_financeiro = (senha_input == SENHA_FINANCEIRO)
+        is_beneficios = (senha_input == SENHA_BENEFICIOS)
+        is_gestao = is_financeiro or is_beneficios
+
+        if is_gestao:
+            st.success(f"Acesso: Gestão {'Financeiro' if is_financeiro else 'Benefícios'}")
             st.divider()
             lista_pendentes = listar_avaliacoes_pendentes()
             if lista_pendentes:
-                # Filtra apenas colaboradores pertencentes ao departamento correspondente
-                lista_filtrada = []
-                for nome_p in lista_pendentes:
-                    d_exp = carregar_dados_colaborador(nome_p)
-                    if d_exp and d_exp.get("area", "").lower() in [dep_permissao.lower(), _slug(dep_permissao)]:
-                        lista_filtrada.append(nome_p)
-                
-                selecionado = st.selectbox("Escolha o Colaborador:", [""] + lista_filtrada)
+                # Filtragem visual apenas por segurança opcional baseada nos nomes do departamento se necessário
+                selecionado = st.selectbox("Escolha o Colaborador:", [""] + lista_pendentes)
                 if selecionado:
                     nome_para_carregar = selecionado
 
-    st.title("🏝️ PROGRAMA DE AVALIAÇÃO GLOBUS SEGUROS")
+    st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-    with st.expander("ℹ️ LEGENDA DA ESCALA DE AVALIAÇÃO", expanded=True):
+    with st.expander("ℹ️ LEGENDA E MANUAL DE PREENCHIMENTO", expanded=True):
         st.markdown(
             """
-        **1 – Muito abaixo do esperado:** desempenho insuficiente, não atende aos requisitos da função.  
-        **2 – Abaixo do esperado:** atende parcialmente, com necessidade frequente de orientação.  
-        **3 – Atende plenamente:** cumpre o que é esperado para a função.  
-        **4 – Supera expectativas:** desempenho acima do esperado de forma consistente.  
-        **5 – Destaque:** desempenho excepcional, referência para o time.  
-        *\*Campo obrigatório quando a avaliação dada for 1 ou 5*
-        """
+            **ATENÇÃO: Você precisa preencher obrigatoriamente todas as categorias das abas antes de conseguir finalizar.**
+            
+            **1 – Muito abaixo do esperado:** desempenho insuficiente, não atende aos requisitos da função.  
+            **2 – Abaixo do esperado:** atende parcialmente, com necessidade frequente de orientação.  
+            **3 – Atende plenamente:** cumpre o que é esperado para a função.  
+            **4 – Supera expectativas:** desempenho acima do esperado de forma consistente.  
+            **5 – Destaque:** desempenho excepcional, referência para o time.  
+            *\\*Campo obrigatório quando a avaliação dada for 1 ou 5*
+            """
         )
 
     dados_existentes = carregar_dados_colaborador(nome_para_carregar) if nome_para_carregar else None
@@ -488,20 +506,11 @@ def main():
         nome_input = st.text_input("Nome do Colaborador*", value=nome_para_carregar, disabled=is_bloqueado).strip()
         
         # Departamento restrito a apenas 2 opções
-        if is_bloqueado:
-            v_area = dados_existentes.get("area", "Financeiro")
-            area_input = st.text_input("Departamento*", value=v_area, disabled=True)
-        else:
-            area_input = st.selectbox("Departamento*", ["Financeiro", "Benefícios"])
-            
-    # Regra automática de Liderança e E-mail baseado no Departamento
-    if area_input == "Financeiro":
-        gestor_automatico = "Elaine Jatobá"
-        email_gestor_automatico = "elaine.jatoba@globusseguros.com.br"
-    else:
-        gestor_automatico = "Roberta Bastos"
-        email_gestor_automatico = "roberta.bastos@globusseguros.com.br"
-
+        v_area = dados_existentes.get("area", "Financeiro") if is_bloqueado else "Financeiro"
+        area_options = ["Financeiro", "Benefícios"]
+        area_idx = area_options.index(v_area) if v_area in area_options else 0
+        area_input = st.selectbox("Departamento*", area_options, index=area_idx, disabled=is_bloqueado)
+        
     with col_cab2:
         v_ano = dados_existentes.get("ano", "2026") if is_bloqueado else "2026"
         ano_input = st.selectbox("Ano", ["2026", "2027", "2028"],
@@ -510,13 +519,22 @@ def main():
         periodo_input = st.radio("Período de Avaliação", ["1º semestre", "2º semestre"],
                                  index=0 if v_per == "1º semestre" else 1, horizontal=True, disabled=is_bloqueado)
 
-    st.text_input("Liderança Direta", value=gestor_automatico, disabled=True)
-    st.text_input("E-mail do Gestor", value=email_gestor_automatico, disabled=True)
+    # Preenchimento automático conforme o departamento selecionado
+    if area_input == "Financeiro":
+        lideranca_automatica = "Elaine Jatobá"
+        email_automatico = "elaine.jatoba@globusseguros.com.br"
+    else:
+        lideranca_automatica = "Roberta Bastos"
+        email_automatico = "roberta.bastos@globusseguros.com.br"
+
+    gestor_input = st.text_input("Liderança Direta*", value=dados_existentes.get("gestor", lideranca_automatica) if is_bloqueado else lideranca_automatica, disabled=True)
+    email_gestor_input = st.text_input("E-mail do Gestor*", value=dados_existentes.get("email_gestor", email_automatico) if is_bloqueado else email_automatico, disabled=is_bloqueado)
 
     st.divider()
 
-    notas_colab, just_colab, feedback_gestor_lista = [], [], []
+    notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
+    # Organização das abas contendo os pilares originais
     pilares_ordem, grupos = [], {}
     for idx, item in enumerate(perguntas_data):
         grupos.setdefault(item["pilar"], [])
@@ -524,17 +542,14 @@ def main():
             pilares_ordem.append(item["pilar"])
         grupos[item["pilar"]].append(idx)
 
-    n_c_map, j_c_map, f_g_map = {}, {}, {}
+    n_c_map, n_g_map, j_c_map, j_g_map = {}, {}, {}, {}
 
-    # Carrega ou inicializa lista de feedbacks do gestor
-    feedbacks_salvos = []
-    if is_bloqueado:
-        feedbacks_salvos = dados_existentes.get("feedback_gestor", [""] * num_total)
-    else:
-        feedbacks_salvos = [""] * num_total
-
-    abas = st.tabs([f"{p}" for p in pilares_ordem])
-    for aba, pil in zip(abas, pilares_ordem):
+    # Inclusão da aba final "Média e Visão de Futuro" na lista de abas
+    titulos_abas = [f"{p} ➜" for p in pilares_ordem] + ["📊 Média e Visão de Futuro"]
+    abas = st.tabs(titulos_abas)
+    
+    # Renderiza perguntas nos pilares normais
+    for idx_aba, (aba, pil) in enumerate(zip(abas[:-1], pilares_ordem)):
         with aba:
             for i in grupos[pil]:
                 item = perguntas_data[i]
@@ -542,98 +557,133 @@ def main():
                 st.caption(f"💡 {item['desc']}")
 
                 v_nota_c = dados_existentes.get("notas_c", [3] * num_total)[i] if is_bloqueado else 3
-                v_obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
 
-                if is_gestora:
-                    # Gestor visualiza a nota do colaborador e insere comentários
-                    st.info(f"Nota dada pelo colaborador: {escala_nomes[v_nota_c]}")
-                    if v_obs_c:
-                        st.text_area("Justificativa do Colaborador", value=v_obs_c, key=f"just_view_{i}", disabled=True)
-                    
-                    obs_g = st.text_area("Comentários e Feedback (Exclusivo para o PDF do Gestor)", 
-                                         value=feedbacks_salvos[i], key=f"fbg_{i}")
+                if is_gestao:
+                    st.info(f"Nota dada pelo colaborador: {v_nota_c} ({escala_nomes[v_nota_c]})")
                     n_c = v_nota_c
-                    obs_c = v_obs_c
+                    obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
+                    
+                    st.markdown("**Feedback e Avaliação da Liderança**")
+                    v_nota_g = dados_existentes.get("notas_g", [3] * num_total)[i] if is_bloqueado else 3
+                    n_g_str = st.selectbox("Nota Liderança (Para registro interno/Média)", list(escala_nomes.values()),
+                                           index=v_nota_g - 1, key=f"ng_{i}")
+                    n_g = int(n_g_str[0])
+                    v_obs_g = dados_existentes.get("just_g", [""] * num_total)[i] if is_bloqueado else ""
+                    obs_g = st.text_area("Feedback Executivo", value=v_obs_g, key=f"obsg_{i}",
+                                         placeholder="Pontos fortes e melhorias que constarão no PDF do gestor...")
                 else:
-                    # Fluxo normal do Colaborador preenchendo
+                    # Modo colaborador só altera se não estiver bloqueado/salvo
                     n_c_str = st.selectbox("Nível de aderência", list(escala_nomes.values()),
                                            index=v_nota_c - 1, key=f"nc_{i}", disabled=is_bloqueado)
                     n_c = int(n_c_str[0])
+                    v_obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
                     label_just = "Justificativa Obrigatória (Nota 1 ou 5)*" if n_c in [1, 5] else "Comentários Adicionais"
                     obs_c = st.text_area(label_just, value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
-                    obs_g = ""
+                    n_g, obs_g = 3, ""
 
-                n_c_map[i] = n_c
-                j_c_map[i] = obs_c
-                f_g_map[i] = obs_g
+                n_c_map[i], n_g_map[i], j_c_map[i], j_g_map[i] = n_c, n_g, obs_c, obs_g
                 st.divider()
+            
+            # Seta indicativa simples para auxiliar navegação pelas abas
+            st.markdown(f"**Próxima etapa:** Vá para a aba **'{titulos_abas[idx_aba + 1]}'** no topo da tela.")
 
+    # Mapeamento ordenado final das notas coletadas
     for i in range(num_total):
-        notas_colab.append(n_c_map[i])
-        just_colab.append(j_c_map[i])
-        feedback_gestor_lista.append(f_g_map[i])
+        notas_colab.append(n_c_map.get(i, 3))
+        notas_gestor.append(n_g_map.get(i, 3))
+        just_colab.append(j_c_map.get(i, ""))
+        just_gestor.append(j_g_map.get(i, ""))
 
-    # Média aritmética pura baseada apenas nas notas do colaborador
-    media_pure = sum(notas_colab) / num_total
-    st.metric("Média Aritmética Atual", f"{media_pure:.2f} / 5.00")
-
-    v_dissert = dados_existentes.get("dissert", "") if is_bloqueado else ""
-    st.markdown("### 🎯 Visão de Futuro e Suporte")
-    if is_gestora:
-        st.text_area("Visão do colaborador sobre seu papel no crescimento da empresa:",
-                     value=v_dissert, disabled=True, height=180)
-        dissert_input = v_dissert
-    else:
-        dissert_input = st.text_area(
-            "Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*",
-            value=v_dissert, disabled=is_bloqueado, height=180)
-
-    # ---------- BOTÕES DE AÇÃO ----------
-    if not is_bloqueado:
-        if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
-            faltando_just = False
-            for idx, n in enumerate(notas_colab):
-                if n in [1, 5] and not just_colab[idx].strip():
-                    faltando_just = True
-                    st.error(f"⚠️ A afirmação {idx+1} requer justificativa.")
-            if nome_input and area_input and dissert_input and not faltando_just:
-                dados_save = {
-                    "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input,
-                    "area": area_input, "gestor": gestor_automatico,
-                    "periodo": periodo_input, "ano": ano_input,
-                    "feedback_gestor": [""] * num_total
-                }
-                salvar_dados_colaborador(nome_input, dados_save)
-                # Envia e-mail de aviso automático para o respectivo gestor
-                enviar_email_notificacao(nome_input, email_gestor_automatico)
-                st.success("Autoavaliação submetida! Seu gestor recebeu um aviso por e-mail.")
-                time.sleep(1.5)
-                st.rerun()
-            elif not faltando_just:
-                st.error("Preencha todos os campos obrigatórios.")
-    else:
-        # Colaborador baixando seu próprio PDF sem feedbacks do gestor
-        if not is_gestora:
-            cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_automatico,
-                   "Periodo": periodo_input, "Ano": ano_input}
-            path_colab = gerar_pdf_final(cab, perguntas_data, notas_colab, just_colab, [""] * num_total, dissert_input, media_pure, modo_gestor=False)
-            with open(path_colab, "rb") as f:
-                st.download_button("📥 Baixar Meu PDF (Apenas minhas Notas)", data=f, file_name=path_colab, mime="application/pdf", use_container_width=True)
+    # ÚLTIMA ABA: Média e Visão de Futuro
+    with abas[-1]:
+        # Agora o cálculo é estritamente Média Aritmética
+        media_colab = sum(notas_colab) / num_total
+        media_gestor = sum(notas_gestor) / num_total
         
-        # Fluxo quando o Gestor está logado
-        if is_gestora:
-            if st.button("💾 Salvar Feedbacks informados", type="secondary", use_container_width=True):
-                dados_existentes["feedback_gestor"] = feedback_gestor_lista
-                salvar_dados_colaborador(nome_input, dados_existentes)
-                st.success("Feedbacks salvos com sucesso!")
-                time.sleep(1)
-                st.rerun()
+        st.markdown("### 📊 Consolidação dos Resultados")
+        
+        if is_gestao:
+            # Exibe a média aritmética do colaborador e do gestor na visão do gestor
+            st.metric("Média Aritmética (Autoavaliação)", f"{media_colab:.2f} / 5.00")
+            st.metric("Média Aritmética (Liderança)", f"{media_gestor:.2f} / 5.00")
+        else:
+            st.metric("Sua Média Aritmética Final", f"{media_colab:.2f} / 5.00")
 
-            cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_automatico,
-                   "Periodo": periodo_input, "Ano": ano_input}
-            path_gestor = gerar_pdf_final(cab, perguntas_data, notas_colab, just_colab, feedback_gestor_lista, dissert_input, media_pure, modo_gestor=True)
-            with open(path_gestor, "rb") as f:
-                st.download_button("📥 Gerar e Baixar PDF Completo (Notas + Feedbacks)", data=f, file_name=path_gestor, mime="application/pdf", use_container_width=True)
+        v_dissert = dados_existentes.get("dissert", "") if is_bloqueado else ""
+        st.markdown("### 🎯 Visão de Futuro e Suporte")
+        if is_gestao:
+            st.text_area("Visão do colaborador sobre seu papel no crescimento da empresa:",
+                         value=v_dissert, disabled=True, height=180)
+            dissert_input = v_dissert
+        else:
+            dissert_input = st.text_area(
+                "Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*",
+                value=v_dissert, disabled=is_bloqueado, height=180)
+
+        st.divider()
+
+        # Fluxos e Ações de Botões e Downloads
+        if not is_bloqueado:
+            if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
+                faltando_just = False
+                for idx, n in enumerate(notas_colab):
+                    if n in [1, 5] and not just_colab[idx].strip():
+                        faltando_just = True
+                        st.error(f"⚠️ A afirmação {idx+1} requer justificativa.")
+                
+                if nome_input and area_input and dissert_input and email_gestor_input and not faltando_just:
+                    dados_save = {
+                        "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input,
+                        "area": area_input, "gestor": gestor_input, "email_gestor": email_gestor_input,
+                        "periodo": periodo_input, "ano": ano_input, "notas_g": notas_gestor, "just_g": just_gestor
+                    }
+                    salvar_dados_colaborador(nome_input, dados_save)
+                    
+                    # Dispara o e-mail contendo o link da aplicação para o gestor cadastrado
+                    enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/")
+                    st.success("Autoavaliação salva com sucesso e e-mail enviado ao gestor!")
+                    time.sleep(1)
+                    st.rerun()
+                elif not faltando_just:
+                    st.error("Preencha todos os campos obrigatórios (verifique se deixou categorias vazias ou sem preencher seu texto de visão de futuro).")
+        else:
+            # Ambos conseguem baixar PDFs, mas com restrições de visibilidade de conteúdo
+            st.markdown("### 📄 Downloads Disponíveis")
+            cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
+            
+            # Botão de download do colaborador (apenas notas dele)
+            pdf_colab_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_colab, "Liderança", modo_gestor=False)
+            with open(pdf_colab_path, "rb") as f:
+                st.download_button(
+                    label="📥 Baixar PDF (Visualização do Colaborador)",
+                    data=f.read(),
+                    file_name=pdf_colab_path,
+                    mime="application/pdf",
+                    key="dl_colab"
+                )
+            
+            # Se a senha correta de gerenciamento estiver ativa, permite salvar alterações do gestor e gerar o PDF completo com comentários
+            if is_gestao:
+                st.divider()
+                st.markdown("### 🛠️ Painel do Avaliador")
+                if st.button("💾 Salvar Comentários / Feedbacks do Gestor", type="secondary"):
+                    dados_existentes["notas_g"] = notas_gestor
+                    dados_existentes["just_g"] = just_gestor
+                    salvar_dados_colaborador(nome_input, dados_existentes)
+                    st.success("Alterações e feedbacks salvos!")
+                    time.sleep(0.5)
+                    st.rerun()
+
+                pdf_gestor_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_gestor, "Liderança", modo_gestor=True)
+                with open(pdf_gestor_path, "rb") as f:
+                    st.download_button(
+                        label="📥 Baixar PDF Completo (Visualização do Gestor com Feedbacks)",
+                        data=f.read(),
+                        file_name=pdf_gestor_path,
+                        mime="application/pdf",
+                        key="dl_gestor",
+                        type="primary"
+                    )
 
 if __name__ == "__main__":
     main()
