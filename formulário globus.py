@@ -28,7 +28,6 @@ from reportlab.pdfbase.ttfonts import TTFont
 EMAIL_ORIGEM = "victormoreiraicnv@gmail.com"
 SENHA_APP = "hlvu kwvm tyfw pxem"
 
-# As senhas foram alteradas conforme solicitado
 SENHA_FINANCEIRO = "financeiro2026"
 SENHA_BENEFICIOS = "beneficios2026"
 PASTA_DADOS = "avaliacoes_salvas"
@@ -141,7 +140,6 @@ def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, modo_gestor=False
     ax.spines["polar"].set_color("#E2E8F0")
     ax.grid(color="#E2E8F0")
 
-    # Se for modo gestor, renderiza o comparativo, se for colaborador renderiza apenas notas dele
     if modo_gestor:
         vg = vals_gestor + vals_gestor[:1]
         ax.plot(angulos, vg, color="#2563EB", linewidth=2, label="Liderança")
@@ -190,12 +188,12 @@ def texto_multilinha(c, texto, x, y, largura_chars, leading, fonte, tamanho, cor
         y -= leading
     return y
 
-def barra(c, x, y, largura, valor, cor_preench, cor_trilho=COR_TRILHO, altura=7):
+def barra(c, x, y, largura, valor, warm_color, cor_trilho=COR_TRILHO, altura=7):
     c.setFillColor(cor_trilho)
     c.roundRect(x, y, largura, altura, altura / 2, fill=1, stroke=0)
     if valor > 0:
         w = max((valor / 5) * largura, altura)
-        c.setFillColor(cor_preench)
+        c.setFillColor(warm_color)
         c.roundRect(x, y, w, altura, altura / 2, fill=1, stroke=0)
 
 def medidor_score(c, cx, cy, raio, score, esp=14):
@@ -298,7 +296,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
         if y < 170:
             y = nova_pagina()
 
-        # Média aritmética baseada em quem está visualizando ou nas notas dadas
         media_pilar = sum(n_gestor[i] if modo_gestor else n_colab[i] for i in indices) / len(indices)
         c.setFillColor(COR_FUNDO_ESCURO)
         c.roundRect(50, y - 8, width - 100, 30, 5, fill=1, stroke=0)
@@ -314,7 +311,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             if y < 150:
                 y = nova_pagina()
 
-            # CORRIGIDO: Modificado 'color=COR_TEXTO' para 'cor=COR_TEXTO' para sanar o TypeError
+            # CORREÇÃO DO PARÂMETRO 'cor': de 'color=COR_TEXTO' para 'cor=COR_TEXTO'
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
@@ -322,7 +319,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             )
             y -= 6
 
-            # Linha autoavaliação sempre visível
             c.setFont(F_BOLD, 8)
             c.setFillColor(COR_CINZA)
             c.drawString(64, y, "Autoavaliação")
@@ -332,7 +328,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             c.drawString(278, y, str(n_colab[i]))
             y -= 16
 
-            # Linha liderança (SÓ NO PDF DO GESTOR)
             if modo_gestor:
                 c.setFont(F_BOLD, 8)
                 c.setFillColor(COR_PRIMARIA)
@@ -350,7 +345,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                     fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
                 )
             
-            # Comentários do gestor (SÓ NO PDF DO GESTOR)
             if modo_gestor and j_gestor[i]:
                 y = texto_multilinha(
                     c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
@@ -436,7 +430,7 @@ perguntas_data = [
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
     {"pergunta": "Priorizo o cliente nas minhas decisões, entendendo o impacto real do meu trabalho no cliente/parceiro.", "pilar": "Foco no cliente", "desc": "Gerar valor real e construir relações de confiança."},
     {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente", "desc": "Encantamento e visão de longo prazo na parceria."},
-    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e superar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
+    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e supercar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
@@ -468,7 +462,6 @@ def main():
         st.header("🔐 Portal Administrativo")
         senha_input = st.text_input("Credencial", type="password")
         
-        # Gerenciamento de acessos via novas senhas de departamentos
         is_financeiro = (senha_input == SENHA_FINANCEIRO)
         is_beneficios = (senha_input == SENHA_BENEFICIOS)
         is_gestao = is_financeiro or is_beneficios
@@ -505,7 +498,6 @@ def main():
     with col_cab1:
         nome_input = st.text_input("Nome do Colaborador*", value=nome_para_carregar, disabled=is_bloqueado).strip()
         
-        # Departamento restrito a apenas 2 opções
         v_area = dados_existentes.get("area", "Financeiro") if is_bloqueado else "Financeiro"
         area_options = ["Financeiro", "Benefícios"]
         area_idx = area_options.index(v_area) if v_area in area_options else 0
@@ -519,7 +511,6 @@ def main():
         periodo_input = st.radio("Período de Avaliação", ["1º semestre", "2º semestre"],
                                  index=0 if v_per == "1º semestre" else 1, horizontal=True, disabled=is_bloqueado)
 
-    # Preenchimento automático conforme o departamento selecionado
     if area_input == "Financeiro":
         lideranca_automatica = "Elaine Jatobá"
         email_automatico = "elaine.jatoba@globusseguros.com.br"
@@ -534,7 +525,6 @@ def main():
 
     notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
-    # Organização das abas contendo os pilares originais
     pilares_ordem, grupos = [], {}
     for idx, item in enumerate(perguntas_data):
         grupos.setdefault(item["pilar"], [])
@@ -544,11 +534,9 @@ def main():
 
     n_c_map, n_g_map, j_c_map, j_g_map = {}, {}, {}, {}
 
-    # Inclusão da aba final "Média e Visão de Futuro" na lista de abas
     titulos_abas = [f"{p} ➜" for p in pilares_ordem] + ["📊 Média e Visão de Futuro"]
     abas = st.tabs(titulos_abas)
     
-    # Renderiza perguntas nos pilares normais
     for idx_aba, (aba, pil) in enumerate(zip(abas[:-1], pilares_ordem)):
         with aba:
             for i in grupos[pil]:
@@ -572,7 +560,6 @@ def main():
                     obs_g = st.text_area("Feedback Executivo", value=v_obs_g, key=f"obsg_{i}",
                                          placeholder="Pontos fortes e melhorias que constarão no PDF do gestor...")
                 else:
-                    # Modo colaborador só altera se não estiver bloqueado/salvo
                     n_c_str = st.selectbox("Nível de aderência", list(escala_nomes.values()),
                                            index=v_nota_c - 1, key=f"nc_{i}", disabled=is_bloqueado)
                     n_c = int(n_c_str[0])
@@ -584,19 +571,15 @@ def main():
                 n_c_map[i], n_g_map[i], j_c_map[i], j_g_map[i] = n_c, n_g, obs_c, obs_g
                 st.divider()
             
-            # Seta indicativa simples para auxiliar navegação pelas abas
             st.markdown(f"**Próxima etapa:** Vá para a aba **'{titulos_abas[idx_aba + 1]}'** no topo da tela.")
 
-    # Mapeamento ordenado final das notas coletadas
     for i in range(num_total):
         notas_colab.append(n_c_map.get(i, 3))
         notas_gestor.append(n_g_map.get(i, 3))
         just_colab.append(j_c_map.get(i, ""))
         just_gestor.append(j_g_map.get(i, ""))
 
-    # ÚLTIMA ABA: Média e Visão de Futuro
     with abas[-1]:
-        # Agora o cálculo é estritamente Média Aritmética
         media_colab = sum(notas_colab) / num_total
         media_gestor = sum(notas_gestor) / num_total
         
@@ -621,7 +604,6 @@ def main():
 
         st.divider()
 
-        # Fluxos e Ações de Botões e Downloads
         if not is_bloqueado:
             if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
                 faltando_just = False
@@ -648,7 +630,7 @@ def main():
             st.markdown("### 📄 Downloads Disponíveis")
             cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
             
-            # Botão de download do colaborador (apenas notas dele)
+            # Botão de download do colaborador (sempre disponível para o colaborador e gestor)
             pdf_colab_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_colab, "Liderança", modo_gestor=False)
             with open(pdf_colab_path, "rb") as f:
                 st.download_button(
@@ -659,7 +641,6 @@ def main():
                     key="dl_colab"
                 )
             
-            # Se a senha correta de gerenciamento estiver ativa, permite salvar alterações do gestor e gerar o PDF completo com comentários
             if is_gestao:
                 st.divider()
                 st.markdown("### 🛠️ Painel do Avaliador")
