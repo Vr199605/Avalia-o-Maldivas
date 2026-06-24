@@ -117,14 +117,13 @@ def listar_avaliacoes_pendentes():
     return sorted(nomes)
 
 # ========== GERAÇÃO DO GRÁFICO RADAR (matplotlib) ==========
-def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png):
+def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, ocultar_gestor=False):
     """Radar comparando autoavaliação x liderança por pilar."""
     n = len(pilares)
     angulos = [i / n * 2 * math.pi for i in range(n)]
     angulos += angulos[:1]
 
     vc = vals_colab + vals_colab[:1]
-    vg = vals_gestor + vals_gestor[:1]
 
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
     ax.set_facecolor("#FFFFFF")
@@ -136,17 +135,21 @@ def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png):
     ax.set_yticks([1, 2, 3, 4, 5])
     ax.set_yticklabels(["1", "2", "3", "4", "5"], color="#94A3B8", size=9)
     ax.set_xticks(angulos[:-1])
-    # quebra rótulos longos em 2 linhas
     rotulos = ["\n".join(wrap(p, 14)) for p in pilares]
     ax.set_xticklabels(rotulos, size=10, color="#1E293B")
     ax.tick_params(pad=12)
     ax.spines["polar"].set_color("#E2E8F0")
     ax.grid(color="#E2E8F0")
 
-    ax.plot(angulos, vg, color="#2563EB", linewidth=2, label="Liderança")
-    ax.fill(angulos, vg, color="#2563EB", alpha=0.18)
-    ax.plot(angulos, vc, color="#64748B", linewidth=2, linestyle="--", label="Autoavaliação")
-    ax.fill(angulos, vc, color="#64748B", alpha=0.10)
+    if not ocultar_gestor:
+        vg = vals_gestor + vals_gestor[:1]
+        ax.plot(angulos, vg, color="#2563EB", linewidth=2, label="Liderança")
+        ax.fill(angulos, vg, color="#2563EB", alpha=0.18)
+        ax.plot(angulos, vc, color="#64748B", linewidth=2, linestyle="--", label="Autoavaliação")
+        ax.fill(angulos, vc, color="#64748B", alpha=0.10)
+    else:
+        ax.plot(angulos, vc, color="#2563EB", linewidth=2, label="Autoavaliação")
+        ax.fill(angulos, vc, color="#2563EB", alpha=0.18)
 
     ax.legend(loc="upper right", bbox_to_anchor=(1.15, 1.12), frameon=False, fontsize=10)
     plt.tight_layout()
@@ -202,11 +205,9 @@ def medidor_score(c, cx, cy, raio, score, esp=14):
     """Donut/anel de progresso com o score no centro."""
     frac = max(0.0, min(score / 5.0, 1.0))
     cor = cor_da_nota(round(score))
-    # trilho
     c.setStrokeColor(COR_TRILHO)
     c.setLineWidth(esp)
     c.circle(cx, cy, raio, stroke=1, fill=0)
-    # arco de progresso (começa no topo, sentido horário)
     c.setStrokeColor(cor)
     c.setLineCap(1)
     p = c.beginPath()
@@ -220,7 +221,6 @@ def medidor_score(c, cx, cy, raio, score, esp=14):
         else:
             p.lineTo(px, py)
     c.drawPath(p, stroke=1, fill=0)
-    # número central
     c.setFillColor(COR_BRANCO)
     c.setFont(F_BLACK, raio * 0.7)
     c.drawCentredString(cx, cy - raio * 0.22, f"{score:.2f}")
@@ -230,9 +230,10 @@ def medidor_score(c, cx, cy, raio, score, esp=14):
 
 # ========== GERAR PDF ==========
 def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
-                    j_colab, j_gestor, dissert, m_final, cargo_avaliador):
+                    j_colab, j_gestor, dissert, m_final, cargo_avaliador, apenas_colaborador=False):
     nome_limpo = _slug(dados_cabecalho["Nome"])
-    arquivo_pdf = f"AVALIACAO_{nome_limpo}.pdf"
+    suffix = "_COLAB" if apenas_colaborador else "_GESTOR"
+    arquivo_pdf = f"AVALIACAO_{nome_limpo}{suffix}.pdf"
     c = canvas.Canvas(arquivo_pdf, pagesize=A4)
     width, height = A4
     ciclo = f"Ciclo Maldivas | {dados_cabecalho['Periodo']} {dados_cabecalho['Ano']}"
@@ -269,10 +270,8 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
     c.setLineWidth(2)
     c.line(width / 2 - 40, height - 275, width / 2 + 40, height - 275)
 
-    # medidor central
     medidor_score(c, width / 2, height - 420, 90, m_final)
 
-    # bloco de identificação
     c.setFillColor(COR_BRANCO)
     c.setFont(F_BOLD, 22)
     c.drawCentredString(width / 2, height - 560, dados_cabecalho["Nome"].upper())
@@ -289,7 +288,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
     # ---------- PÁGINAS DE CONTEÚDO: AGRUPADO POR PILAR ----------
     ctx = {"nova_pagina": nova_pagina}
 
-    # agrupa índices por pilar preservando a ordem
     pilares_ordem = []
     grupos = {}
     for idx, item in enumerate(perguntas_data):
@@ -304,16 +302,17 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
         if y < 170:
             y = nova_pagina()
 
-        # cabeçalho do pilar com mini-score
-        media_pilar_g = sum(n_gestor[i] for i in indices) / len(indices)
+        media_pilar_c = sum(n_colab[i] for i in indices) / len(indices)
+        media_pilar_exib = media_pilar_c if apenas_colaborador else sum(n_colab[i] for i in indices) / len(indices)
+        
         c.setFillColor(COR_FUNDO_ESCURO)
         c.roundRect(50, y - 8, width - 100, 30, 5, fill=1, stroke=0)
         c.setFillColor(COR_BRANCO)
         c.setFont(F_BOLD, 12)
         c.drawString(64, y, pil.upper())
-        c.setFillColor(cor_da_nota(round(media_pilar_g)))
+        c.setFillColor(cor_da_nota(round(media_pilar_exib)))
         c.setFont(F_BLACK, 13)
-        c.drawRightString(width - 64, y, f"{media_pilar_g:.1f}")
+        c.drawRightString(width - 64, y, f"{media_pilar_exib:.1f}")
         y -= 34
 
         for i in indices:
@@ -327,25 +326,26 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             )
             y -= 6
 
-            # linha autoavaliação
+            # linha autoavaliação / nota do colaborador
             c.setFont(F_BOLD, 8)
-            c.setFillColor(COR_CINZA)
-            c.drawString(64, y, "Autoavaliação")
-            barra(c, 150, y - 1, 120, n_colab[i], COR_CINZA)
+            c.setFillColor(COR_PRIMARIA if apenas_colaborador else COR_CINZA)
+            c.drawString(64, y, "Nota do Colaborador" if apenas_colaborador else "Autoavaliação")
+            barra(c, 150, y - 1, 120, n_colab[i], COR_PRIMARIA if apenas_colaborador else COR_CINZA)
             c.setFillColor(cor_da_nota(n_colab[i]))
             c.setFont(F_BOLD, 9)
             c.drawString(278, y, str(n_colab[i]))
             y -= 16
 
-            # linha liderança
-            c.setFont(F_BOLD, 8)
-            c.setFillColor(COR_PRIMARIA)
-            c.drawString(64, y, cargo_avaliador)
-            barra(c, 150, y - 1, 120, n_gestor[i], COR_PRIMARIA, cor_trilho=COR_PRIMARIA_CLARA)
-            c.setFillColor(cor_da_nota(n_gestor[i]))
-            c.setFont(F_BOLD, 9)
-            c.drawString(278, y, str(n_gestor[i]))
-            y -= 18
+            if not apenas_colaborador:
+                # linha de feedback e visualização do gestor
+                c.setFont(F_BOLD, 8)
+                c.setFillColor(COR_PRIMARIA)
+                c.drawString(64, y, cargo_avaliador)
+                barra(c, 150, y - 1, 120, n_colab[i], COR_PRIMARIA, cor_trilho=COR_PRIMARIA_CLARA)
+                c.setFillColor(cor_da_nota(n_colab[i]))
+                c.setFont(F_BOLD, 9)
+                c.drawString(278, y, str(n_colab[i]))
+                y -= 18
 
             if j_colab[i]:
                 y = texto_multilinha(
@@ -353,27 +353,27 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                     largura_chars=118, leading=11,
                     fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
                 )
-            if j_gestor[i]:
+            if not apenas_colaborador and j_gestor[i]:
                 y = texto_multilinha(
-                    c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
+                    c, f"Feedback {cargo_avaliador}: {j_gestor[i]}", 64, y,
                     largura_chars=118, leading=11,
                     fonte=F_ITALIC, tamanho=8, cor=COR_PRIMARIA, contexto=ctx,
                 )
             y -= 14
 
     # ---------- RADAR DOS PILARES ----------
-    radar_png = os.path.join(PASTA_DADOS, f"_radar_{nome_limpo}.png")
+    radar_png = os.path.join(PASTA_DADOS, f"_radar_{nome_limpo}{suffix}.png")
     vals_colab = [sum(n_colab[i] for i in grupos[p]) / len(grupos[p]) for p in pilares_ordem]
-    vals_gestor = [sum(n_gestor[i] for i in grupos[p]) / len(grupos[p]) for p in pilares_ordem]
+    vals_gestor = vals_colab
     try:
-        gerar_radar(pilares_ordem, vals_colab, vals_gestor, radar_png)
+        gerar_radar(pilares_ordem, vals_colab, vals_gestor, radar_png, ocultar_gestor=apenas_colaborador)
         y = nova_pagina()
         c.setFillColor(COR_TEXTO)
         c.setFont(F_BOLD, 14)
         c.drawString(50, y, "VISÃO GERAL POR PILAR")
         c.setFillColor(COR_CINZA)
         c.setFont(F_REGULAR, 9)
-        c.drawString(50, y - 16, "Comparativo entre autoavaliação e visão da liderança.")
+        c.drawString(50, y - 16, "Acompanhamento do desempenho do pilar.")
         img = ImageReader(radar_png)
         iw, ih = img.getSize()
         disp_w = 380
@@ -400,13 +400,36 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
         fonte=F_REGULAR, tamanho=9, cor=COR_TEXTO_SUAVE, contexto=ctx, min_y=80,
     )
 
-    # rodapé da última página
     _rodape(c, width, estado["pagina"])
     c.save()
 
     if os.path.exists(radar_png):
         os.remove(radar_png)
     return arquivo_pdf
+
+def notificar_gestor_email(nome_colaborador, email_gestor):
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_ORIGEM
+    msg["To"] = email_gestor
+    msg["Subject"] = f"🎯 Avaliação de Desempenho para Revisar: {nome_colaborador}"
+    corpo = (
+        f"Olá,\n\nO colaborador {nome_colaborador} concluiu a autoavaliação.\n"
+        f"Acesse o link para visualizar o painel, preencher seus feedbacks e baixar o relatório completo:\n"
+        f"https://6gxzkzhhzmceshkaojrpb7.streamlit.app/\n\n"
+        f"Atenciosamente,\nSistema de Avaliação Maldivas"
+    )
+    msg.attach(MIMEText(corpo, "plain"))
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
+        server.ehlo()
+        server.starttls()
+        server.login(EMAIL_ORIGEM, SENHA_APP.replace(" ", ""))
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        st.error(f"Erro ao notificar liderança por e-mail: {e}")
+        return False
 
 def enviar_email(nome, arquivo_pdf, media):
     destinatarios_str = ", ".join(EMAIL_DESTINO) if isinstance(EMAIL_DESTINO, list) else EMAIL_DESTINO
@@ -527,14 +550,18 @@ def main():
         periodo_input = st.radio("Período de Avaliação", ["1º semestre", "2º semestre"],
                                  index=0 if v_per == "1º semestre" else 1, horizontal=True, disabled=is_bloqueado)
 
-    v_gestor = dados_existentes.get("gestor", "") if is_bloqueado else ""
-    gestor_input = st.text_input("Liderança Direta*", value=v_gestor, disabled=is_bloqueado)
+    col_gest1, col_gest2 = st.columns(2)
+    with col_gest1:
+        v_gestor = dados_existentes.get("gestor", "") if is_bloqueado else ""
+        gestor_input = st.text_input("Liderança Direta*", value=v_gestor, disabled=is_bloqueado)
+    with col_gest2:
+        v_email_gestor = dados_existentes.get("email_gestor", "") if is_bloqueado else ""
+        email_gestor_input = st.text_input("E-mail do Gestor Direto*", value=v_email_gestor, disabled=is_bloqueado)
 
     st.divider()
 
     notas_colab, notas_gestor, just_colab, just_gestor = [], [], [], []
 
-    # agrupa perguntas por pilar para exibição em abas
     pilares_ordem, grupos = [], {}
     for idx, item in enumerate(perguntas_data):
         grupos.setdefault(item["pilar"], [])
@@ -542,7 +569,6 @@ def main():
             pilares_ordem.append(item["pilar"])
         grupos[item["pilar"]].append(idx)
 
-    # placeholders de notas, preenchidos dentro das abas
     n_c_map, n_g_map, j_c_map, j_g_map = {}, {}, {}, {}
 
     abas = st.tabs([f"{p}" for p in pilares_ordem])
@@ -554,17 +580,16 @@ def main():
                 st.caption(f"💡 {item['desc']}")
 
                 v_nota_c = dados_existentes.get("notas_c", [3] * num_total)[i] if is_bloqueado else 3
+                v_just_g = dados_existentes.get("just_g", [""] * num_total)[i] if is_bloqueado else ""
 
                 if is_gestora or is_diretora:
-                    st.warning("🔒 Autoavaliação confidencial (oculta)")
+                    st.info(f"Nota dada pelo colaborador: **{escala_nomes[v_nota_c]}**")
                     n_c = v_nota_c
                     obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
-                    st.markdown("**Avaliação da Liderança**")
-                    n_g_str = st.selectbox("Nota Liderança", list(escala_nomes.values()),
-                                           index=2, key=f"ng_{i}")
-                    n_g = int(n_g_str[0])
-                    obs_g = st.text_area("Feedback Executivo", key=f"obsg_{i}",
-                                         placeholder="Pontos fortes e melhorias...")
+                    st.markdown("**Feedback da Liderança**")
+                    obs_g = st.text_area("Feedback Executivo", value=v_just_g, key=f"obsg_{i}",
+                                         placeholder="Pontos fortes e melhorias para esta categoria...")
+                    n_g = v_nota_c
                 else:
                     n_c_str = st.selectbox("Nível de aderência", list(escala_nomes.values()),
                                            index=v_nota_c - 1, key=f"nc_{i}", disabled=is_bloqueado)
@@ -572,22 +597,19 @@ def main():
                     v_obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
                     label_just = "Justificativa Obrigatória (Nota 1 ou 5)*" if n_c in [1, 5] else "Comentários Adicionais"
                     obs_c = st.text_area(label_just, value=v_obs_c, key=f"obsc_{i}", disabled=is_bloqueado)
-                    n_g, obs_g = 3, ""
+                    n_g, obs_g = n_c, ""
 
                 n_c_map[i], n_g_map[i], j_c_map[i], j_g_map[i] = n_c, n_g, obs_c, obs_g
                 st.divider()
 
-    # reordena por índice
     for i in range(num_total):
         notas_colab.append(n_c_map[i])
         notas_gestor.append(n_g_map[i])
         just_colab.append(j_c_map[i])
         just_gestor.append(j_g_map[i])
 
-    # métrica viva para a liderança
-    if is_gestora or is_diretora:
-        media_parcial = ((sum(notas_colab) / num_total) * 0.4) + ((sum(notas_gestor) / num_total) * 0.6)
-        st.metric("Score parcial (40% auto + 60% liderança)", f"{media_parcial:.2f} / 5.00")
+    media_parcial = (sum(notas_colab) / num_total)
+    st.metric("Média Aritmética das Notas", f"{media_parcial:.2f} / 5.00")
 
     v_dissert = dados_existentes.get("dissert", "") if is_bloqueado else ""
     st.markdown("### 🎯 Visão de Futuro e Suporte")
@@ -601,39 +623,55 @@ def main():
             value=v_dissert, disabled=is_bloqueado, height=180)
 
     if not is_bloqueado:
-        if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
-            faltando_just = False
-            for idx, n in enumerate(notas_colab):
-                if n in [1, 5] and not just_colab[idx].strip():
-                    faltando_just = True
-                    st.error(f"⚠️ A afirmação {idx+1} requer justificativa.")
-            if nome_input and area_input and dissert_input and not faltando_just:
-                dados_save = {
-                    "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input,
-                    "area": area_input, "gestor": gestor_input,
-                    "periodo": periodo_input, "ano": ano_input,
-                }
-                salvar_dados_colaborador(nome_input, dados_save)
-                st.success("Autoavaliação salva!")
-                time.sleep(1)
-                st.rerun()
-            elif not faltando_just:
-                st.error("Preencha todos os campos obrigatórios.")
+        col_btn1, col_btn2 = st.columns([3, 1])
+        with col_btn1:
+            if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
+                faltando_just = False
+                for idx, n in enumerate(notas_colab):
+                    if n in [1, 5] and not just_colab[idx].strip():
+                        faltando_just = True
+                        st.error(f"⚠️ A afirmação {idx+1} requer justificativa.")
+                if nome_input and area_input and dissert_input and email_gestor_input and not faltando_just:
+                    dados_save = {
+                        "notas_c": notas_colab, "just_c": just_colab, "dissert": dissert_input,
+                        "area": area_input, "gestor": gestor_input, "email_gestor": email_gestor_input,
+                        "periodo": periodo_input, "ano": ano_input, "just_g": just_gestor
+                    }
+                    salvar_dados_colaborador(nome_input, dados_save)
+                    notificar_gestor_email(nome_input, email_gestor_input)
+                    st.success("Autoavaliação salva com sucesso e gestor notificado!")
+                    time.sleep(1)
+                    st.rerun()
+                elif not faltando_just:
+                    st.error("Preencha todos os campos obrigatórios, incluindo o e-mail do gestor.")
+        with col_btn2:
+            cab_temp = {"Nome": nome_input or "Colaborador", "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
+            path_colab = gerar_pdf_final(cab_temp, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_parcial, "Colaborador", apenas_colaborador=True)
+            with open(path_colab, "rb") as f:
+                st.download_button("📥 Baixar Meu PDF", data=f, file_name=path_colab, mime="application/pdf", use_container_width=True)
 
     elif is_gestora or is_diretora:
         label = "Gestora" if is_gestora else "Diretora"
-        if st.button(f"Gerar Relatório Final e Enviar PDF ({label})", type="primary", use_container_width=True):
-            with st.spinner("Gerando relatório premium..."):
-                m_final = ((sum(notas_colab) / num_total) * 0.4) + ((sum(notas_gestor) / num_total) * 0.6)
-                cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input,
-                       "Periodo": periodo_input, "Ano": ano_input}
-                path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor,
-                                       just_colab, just_gestor, dissert_input, m_final, label)
-                if enviar_email(nome_input, path, m_final):
-                    st.success("Relatório enviado!")
+        
+        st.divider()
+        if st.button(f"💾 Salvar Feedbacks e Atualizar Relatório ({label})", type="primary", use_container_width=True):
+            dados_existentes["just_g"] = just_gestor
+            salvar_dados_colaborador(nome_input, dados_existentes)
+            st.success("Comentários e feedbacks salvos com sucesso!")
+            time.sleep(0.5)
+            st.rerun()
+
+        cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
+        path_gestor = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_parcial, label, apenas_colaborador=False)
+        
+        with open(path_gestor, "rb") as f:
+            st.download_button(f"📥 Baixar PDF Oficial com Feedbacks ({label})", data=f, file_name=path_gestor, mime="application/pdf", use_container_width=True)
+            
+        if st.button("📧 Enviar PDF por E-mail Corporativo", use_container_width=True):
+            with st.spinner("Enviando..."):
+                if enviar_email(nome_input, path_gestor, media_parcial):
+                    st.success("Relatório enviado por e-mail com sucesso!")
                     st.balloons()
-                    if os.path.exists(path):
-                        os.remove(path)
 
 if __name__ == "__main__":
     main()
