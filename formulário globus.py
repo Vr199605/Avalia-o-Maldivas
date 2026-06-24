@@ -188,12 +188,12 @@ def texto_multilinha(c, texto, x, y, largura_chars, leading, fonte, tamanho, cor
         y -= leading
     return y
 
-def barra(c, x, y, largura, valor, warm_color, cor_trilho=COR_TRILHO, altura=7):
+def barra(c, x, y, largura, valor, cor_preench, cor_trilho=COR_TRILHO, altura=7):
     c.setFillColor(cor_trilho)
     c.roundRect(x, y, largura, altura, altura / 2, fill=1, stroke=0)
     if valor > 0:
         w = max((valor / 5) * largura, altura)
-        c.setFillColor(warm_color)
+        c.setFillColor(cor_preench)
         c.roundRect(x, y, w, altura, altura / 2, fill=1, stroke=0)
 
 def medidor_score(c, cx, cy, raio, score, esp=14):
@@ -311,7 +311,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             if y < 150:
                 y = nova_pagina()
 
-            # CORREÇÃO DO PARÂMETRO 'cor': de 'color=COR_TEXTO' para 'cor=COR_TEXTO'
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
@@ -430,11 +429,11 @@ perguntas_data = [
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
     {"pergunta": "Priorizo o cliente nas minhas decisões, entendendo o impacto real do meu trabalho no cliente/parceiro.", "pilar": "Foco no cliente", "desc": "Gerar valor real e construir relações de confiança."},
     {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente", "desc": "Encantamento e visão de longo prazo na parceria."},
-    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e supercar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
+    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e superar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
-    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura e respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
+    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura and respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
     {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Espírito de equipe e apoio mútuo para vencer."},
 ]
 perguntas = [item["pergunta"] for item in perguntas_data]
@@ -474,6 +473,18 @@ def main():
                 selecionado = st.selectbox("Escolha o Colaborador:", [""] + lista_pendentes)
                 if selecionado:
                     nome_para_carregar = selecionado
+                
+                # Inclusão da Lixeira na aba do gestor para deletar testes
+                if selecionado:
+                    st.divider()
+                    confirma_exclusao = st.checkbox("Confirmo excluir esta avaliação (Teste)")
+                    if st.button("🗑️ Excluir Avaliação", disabled=not confirma_exclusao, type="primary"):
+                        caminho_del = os.path.join(PASTA_DADOS, f"{_slug(selecionado)}.json")
+                        if os.path.exists(caminho_del):
+                            os.remove(caminho_del)
+                        st.success("Avaliação excluída com sucesso.")
+                        time.sleep(1)
+                        st.rerun()
 
     st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
@@ -604,6 +615,8 @@ def main():
 
         st.divider()
 
+        cab = {"Nome": nome_input if nome_input else "Colaborador", "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
+
         if not is_bloqueado:
             if st.button("Finalizar e Protocolar Autoavaliação", type="primary", use_container_width=True):
                 faltando_just = False
@@ -619,7 +632,6 @@ def main():
                         "periodo": periodo_input, "ano": ano_input, "notas_g": notas_gestor, "just_g": just_gestor
                     }
                     salvar_dados_colaborador(nome_input, dados_save)
-                    
                     enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/")
                     st.success("Autoavaliação salva com sucesso e e-mail enviado ao gestor!")
                     time.sleep(1)
@@ -628,18 +640,18 @@ def main():
                     st.error("Preencha todos os campos obrigatórios (verifique se deixou categorias vazias ou sem preencher seu texto de visão de futuro).")
         else:
             st.markdown("### 📄 Downloads Disponíveis")
-            cab = {"Nome": nome_input, "Area": area_input, "Gestor": gestor_input, "Periodo": periodo_input, "Ano": ano_input}
             
-            # Botão de download do colaborador (sempre disponível para o colaborador e gestor)
-            pdf_colab_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_colab, "Liderança", modo_gestor=False)
-            with open(pdf_colab_path, "rb") as f:
-                st.download_button(
-                    label="📥 Baixar PDF (Visualização do Colaborador)",
-                    data=f.read(),
-                    file_name=pdf_colab_path,
-                    mime="application/pdf",
-                    key="dl_colab"
-                )
+            # Gerado dinamicamente no clique para evitar erros de renderização prévia
+            if st.button("Generar PDF Colaborador"):
+                pdf_colab_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_colab, "Liderança", modo_gestor=False)
+                with open(pdf_colab_path, "rb") as f:
+                    st.download_button(
+                        label="📥 Clique para Baixar PDF (Visualização do Colaborador)",
+                        data=f.read(),
+                        file_name=pdf_colab_path,
+                        mime="application/pdf",
+                        key="download_efetivo_colab"
+                    )
             
             if is_gestao:
                 st.divider()
@@ -652,16 +664,17 @@ def main():
                     time.sleep(0.5)
                     st.rerun()
 
-                pdf_gestor_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_gestor, "Liderança", modo_gestor=True)
-                with open(pdf_gestor_path, "rb") as f:
-                    st.download_button(
-                        label="📥 Baixar PDF Completo (Visualização do Gestor com Feedbacks)",
-                        data=f.read(),
-                        file_name=pdf_gestor_path,
-                        mime="application/pdf",
-                        key="dl_gestor",
-                        type="primary"
-                    )
+                if st.button("Generar PDF Gestor"):
+                    pdf_gestor_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_gestor, "Liderança", modo_gestor=True)
+                    with open(pdf_gestor_path, "rb") as f:
+                        st.download_button(
+                            label="📥 Clique para Baixar PDF Completo (Visualização do Gestor)",
+                            data=f.read(),
+                            file_name=pdf_gestor_path,
+                            mime="application/pdf",
+                            key="download_efetivo_gestor",
+                            type="primary"
+                        )
 
 if __name__ == "__main__":
     main()
