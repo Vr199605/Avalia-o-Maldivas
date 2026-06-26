@@ -119,14 +119,15 @@ def listar_avaliacoes_pendentes():
     nomes = [os.path.basename(f).replace(".json", "").replace("_", " ").title() for f in arquivos]
     return sorted(nomes)
 
-def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano):
+def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano, media=""):
     """Envia os dados usando urlencode para garantir o mapeamento de parâmetros aceito pelo Google Sheets."""
     payload = {
         "colaborador": colaborador,
         "lideranca": lideranca,
         "departamento": departamento,
         "periodo": periodo,
-        "ano": ano
+        "ano": ano,
+        "media": str(media)
     }
     try:
         data = urllib.parse.urlencode(payload).encode("utf-8")
@@ -444,7 +445,7 @@ perguntas_data = [
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
-    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura e respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
+    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantém postura madura and respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
     {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Espírito de equipe e apoio mútuo para vencer."},
 ]
 perguntas = [item["pergunta"] for item in perguntas_data]
@@ -641,7 +642,7 @@ def main():
                     }
                     salvar_dados_colaborador(nome_input, dados_save)
                     
-                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input)
+                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, round(media_colab, 2))
                     enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/", area_input)
                     
                     st.success("Autoavaliação cadastrada! O download do seu arquivo PDF foi liberado abaixo.")
@@ -673,7 +674,7 @@ def main():
                     dados_existentes["just_g"] = just_gestor
                     salvar_dados_colaborador(nome_input, dados_existentes)
                     
-                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input)
+                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, round(media_colab, 2))
                     
                     st.success("Alterações e feedbacks integrados à planilha com sucesso!")
                     time.sleep(0.5)
