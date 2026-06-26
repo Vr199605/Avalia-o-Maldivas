@@ -530,7 +530,9 @@ def main():
         email_automatico = "roberta.bastos@globusseguros.com.br"
 
     gestor_input = st.text_input("Liderança Direta*", value=dados_existentes.get("gestor", lideranca_automatica) if is_bloqueado else lideranca_automatica, disabled=True)
-    email_gestor_input = st.text_input("E-mail do Gestor*", value=dados_existentes.get("email_gestor", email_automatico) if is_bloqueado else email_automatico, disabled=is_bloqueado)
+    
+    # Campo alterado para disabled=True permanentemente, travando-o junto com a liderança
+    email_gestor_input = st.text_input("E-mail do Gestor*", value=dados_existentes.get("email_gestor", email_automatico) if is_bloqueado else email_automatico, disabled=True)
 
     st.divider()
 
@@ -560,7 +562,7 @@ def main():
                 if is_gestao:
                     st.info(f"Nota dada pelo colaborador: {v_nota_c} ({escala_nomes[v_nota_c]})")
                     n_c = v_nota_c
-                    obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
+                    obs_c = dados_existentes.get("just_c", ["**"] * num_total)[i] if is_bloqueado else ""
                     
                     st.markdown("**Feedback e Avaliação da Liderança**")
                     v_nota_g = dados_existentes.get("notas_g", [3] * num_total)[i] if is_bloqueado else 3
