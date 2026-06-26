@@ -7,6 +7,7 @@ import time
 import math
 import unicodedata
 import urllib.request
+import urllib.parse
 from textwrap import wrap
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -34,7 +35,7 @@ PASTA_DADOS = "avaliacoes_salvas"
 PASTA_FONTES = os.path.join(PASTA_DADOS, "fontes")
 ARQUIVO_LOGO = os.path.join(PASTA_DADOS, "logo_maldivas.png")
 
-# Endpoint para recebimento e gravação ativa de dados na planilha do Google
+# Endpoint do Google Apps Script configurado para receber as variáveis e inserir na linha
 URL_GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbz_9I93G3-qK9wX8zLnd_Uo6Gj_5B3PwtY4XpZ81VwP5N370w89rMeeI8t9i1_98S76/exec"
 
 os.makedirs(PASTA_DADOS, exist_ok=True)
@@ -119,7 +120,7 @@ def listar_avaliacoes_pendentes():
     return sorted(nomes)
 
 def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano):
-    """Envia os dados via POST estruturado para persistência direta na planilha de destino."""
+    """Envia os dados usando urlencode para garantir o mapeamento de parâmetros aceito pelo Google Sheets."""
     payload = {
         "colaborador": colaborador,
         "lideranca": lideranca,
@@ -129,14 +130,15 @@ def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, pe
         "ano": ano
     }
     try:
-        data = json.dumps(payload).encode("utf-8")
+        # Codificação correta em formato de formulário exigida pelo ecossistema do Google Web Apps
+        data = urllib.parse.urlencode(payload).encode("utf-8")
         req = urllib.request.Request(
             URL_GOOGLE_SHEETS_API, 
             data=data, 
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
-        with urllib.request.urlopen(req, timeout=12) as response:
-            return response.getcode() == 200
+        with urllib.request.urlopen(req, timeout=15) as response:
+            return response.getcode() in [200, 201]
     except Exception:
         return False
 
@@ -352,7 +354,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                     fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
                 )
             
-            # Seção de notas do gestor completamente omitida. Apenas feedbacks textuais aparecem.
+            # Seção de notas do gestor omitida. Apenas feedbacks textuais aparecem.
             if modo_gestor and j_gestor[i]:
                 y = texto_multilinha(
                     c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
@@ -445,7 +447,7 @@ perguntas_data = [
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
-    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura e respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
+    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura and respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
     {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Espírito de equipe e apoio mútuo para vencer."},
 ]
 perguntas = [item["pergunta"] for item in perguntas_data]
@@ -574,7 +576,7 @@ def main():
                     obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
                     
                     st.markdown("**Feedback da Liderança**")
-                    n_g = v_nota_c  # Espelhado internamente sem expor notas ou seletores adicionais
+                    n_g = v_nota_c  
                     v_obs_g = dados_existentes.get("just_g", [""] * num_total)[i] if is_bloqueado else ""
                     obs_g = st.text_area("Feedback Executivo", value=v_obs_g, key=f"obsg_{i}",
                                          placeholder="Pontos fortes e melhorias que constarão no PDF do gestor...")
