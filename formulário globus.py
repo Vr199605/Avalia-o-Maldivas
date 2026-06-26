@@ -122,11 +122,11 @@ def listar_avaliacoes_pendentes():
 def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano, media=""):
     """Envia os dados usando urlencode para garantir o mapeamento de parâmetros aceito pelo Google Sheets."""
     payload = {
-        "colaborador": colaborador,
-        "lideranca": lideranca,
-        "departamento": departamento,
-        "periodo": periodo,
-        "ano": ano,
+        "colaborador": str(colaborador),
+        "lideranca": str(lideranca),
+        "departamento": str(departamento),
+        "periodo": str(periodo),
+        "ano": str(ano),
         "media": str(media)
     }
     try:
@@ -435,7 +435,7 @@ def enviar_email(nome, email_gestor, link_app, departamento):
 
 # ========== DADOS DAS PERGUNTAS ==========
 perguntas_data = [
-    {"pergunta": "Busco melhoria contínua e domínio técnico, elevando o nível das minhas entregas e do time.", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
+    {"pergunta": "Busco melhoria contínua e domínio técnico, elevando o nível das minhas entregas and do time.", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
     {"pergunta": "Demonstro domínio técnico absoluto e precisão na execução das minhas tarefas operacionais.", "pilar": "Alta performance", "desc": "Precisão e domínio das ferramentas de trabalho."},
     {"pergunta": "Assumo erros e problemas agindo com postura de dono, sem transferir a responsabilidade aos outros.", "pilar": "Sem desculpa", "desc": "Autorresponsabilidade e foco total na solução rápida."},
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
@@ -642,7 +642,8 @@ def main():
                     }
                     salvar_dados_colaborador(nome_input, dados_save)
                     
-                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, round(media_colab, 2))
+                    media_str = f"{media_colab:.2f}".replace(".", ",")
+                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, media_str)
                     enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/", area_input)
                     
                     st.success("Autoavaliação cadastrada! O download do seu arquivo PDF foi liberado abaixo.")
@@ -674,7 +675,8 @@ def main():
                     dados_existentes["just_g"] = just_gestor
                     salvar_dados_colaborador(nome_input, dados_existentes)
                     
-                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, round(media_colab, 2))
+                    media_str = f"{media_colab:.2f}".replace(".", ",")
+                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, media_str)
                     
                     st.success("Alterações e feedbacks integrados à planilha com sucesso!")
                     time.sleep(0.5)
