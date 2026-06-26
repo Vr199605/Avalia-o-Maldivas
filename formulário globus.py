@@ -35,7 +35,7 @@ PASTA_DADOS = "avaliacoes_salvas"
 PASTA_FONTES = os.path.join(PASTA_DADOS, "fontes")
 ARQUIVO_LOGO = os.path.join(PASTA_DADOS, "logo_maldivas.png")
 
-# Endpoint do Google Apps Script configurado para receber as variáveis e inserir na linha
+# Certifique-se de atualizar este link após publicar o código do Apps Script abaixo!
 URL_GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbz_9I93G3-qK9wX8zLnd_Uo6Gj_5B3PwtY4XpZ81VwP5N370w89rMeeI8t9i1_98S76/exec"
 
 os.makedirs(PASTA_DADOS, exist_ok=True)
@@ -130,7 +130,6 @@ def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, pe
         "ano": ano
     }
     try:
-        # Codificação correta em formato de formulário exigida pelo ecossistema do Google Web Apps
         data = urllib.parse.urlencode(payload).encode("utf-8")
         req = urllib.request.Request(
             URL_GOOGLE_SHEETS_API, 
@@ -331,6 +330,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             if y < 150:
                 y = nova_pagina()
 
+            # CORREÇÃO: Alterado de color=COR_TEXTO para cor=COR_TEXTO conforme assinatura da função
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
@@ -354,7 +354,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                     fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
                 )
             
-            # Seção de notas do gestor omitida. Apenas feedbacks textuais aparecem.
             if modo_gestor and j_gestor[i]:
                 y = texto_multilinha(
                     c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
