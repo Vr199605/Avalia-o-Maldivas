@@ -119,15 +119,14 @@ def listar_avaliacoes_pendentes():
     nomes = [os.path.basename(f).replace(".json", "").replace("_", " ").title() for f in arquivos]
     return sorted(nomes)
 
-def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano, media=""):
+def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano):
     """Envia os dados usando urlencode para garantir o mapeamento de parâmetros aceito pelo Google Sheets."""
     payload = {
         "colaborador": str(colaborador),
         "lideranca": str(lideranca),
         "departamento": str(departamento),
         "periodo": str(periodo),
-        "ano": str(ano),
-        "media": str(media)
+        "ano": str(ano)
     }
     try:
         data = urllib.parse.urlencode(payload).encode("utf-8")
@@ -642,8 +641,7 @@ def main():
                     }
                     salvar_dados_colaborador(nome_input, dados_save)
                     
-                    media_str = f"{media_colab:.2f}".replace(".", ",")
-                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, media_str)
+                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input)
                     enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/", area_input)
                     
                     st.success("Autoavaliação cadastrada! O download do seu arquivo PDF foi liberado abaixo.")
@@ -675,8 +673,7 @@ def main():
                     dados_existentes["just_g"] = just_gestor
                     salvar_dados_colaborador(nome_input, dados_existentes)
                     
-                    media_str = f"{media_colab:.2f}".replace(".", ",")
-                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input, media_str)
+                    salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input)
                     
                     st.success("Alterações e feedbacks integrados à planilha com sucesso!")
                     time.sleep(0.5)
