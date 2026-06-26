@@ -34,7 +34,7 @@ PASTA_DADOS = "avaliacoes_salvas"
 PASTA_FONTES = os.path.join(PASTA_DADOS, "fontes")
 ARQUIVO_LOGO = os.path.join(PASTA_DADOS, "logo_maldivas.png")
 
-# ID do Script configurado para a planilha fornecida pelo usuário
+# Endpoint para recebimento e gravação ativa de dados na planilha do Google
 URL_GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbz_9I93G3-qK9wX8zLnd_Uo6Gj_5B3PwtY4XpZ81VwP5N370w89rMeeI8t9i1_98S76/exec"
 
 os.makedirs(PASTA_DADOS, exist_ok=True)
@@ -119,7 +119,7 @@ def listar_avaliacoes_pendentes():
     return sorted(nomes)
 
 def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano):
-    """Envia os dados via POST para o Google Apps Script integrado à planilha do cliente."""
+    """Envia os dados via POST estruturado para persistência direta na planilha de destino."""
     payload = {
         "colaborador": colaborador,
         "lideranca": lideranca,
@@ -135,14 +135,14 @@ def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, pe
             data=data, 
             headers={"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=12) as response:
             return response.getcode() == 200
     except Exception:
         return False
 
 # ========== GERAÇÃO DO GRÁFICO RADAR (matplotlib) ==========
 def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, modo_gestor=False):
-    """Radar comparando autoavaliação x liderança por pilar."""
+    """Radar exibindo a autoavaliação por pilar (Unificado devido à remoção de notas da liderança)."""
     n = len(pilares)
     angulos = [i / n * 2 * math.pi for i in range(n)]
     angulos += angulos[:1]
@@ -165,15 +165,8 @@ def gerar_radar(pilares, vals_colab, vals_gestor, caminho_png, modo_gestor=False
     ax.spines["polar"].set_color("#E2E8F0")
     ax.grid(color="#E2E8F0")
 
-    if modo_gestor:
-        vg = vals_gestor + vals_gestor[:1]
-        ax.plot(angulos, vg, color="#2563EB", linewidth=2, label="Liderança")
-        ax.fill(angulos, vg, color="#2563EB", alpha=0.18)
-        ax.plot(angulos, vc, color="#64748B", linewidth=2, linestyle="--", label="Autoavaliação")
-        ax.fill(angulos, vc, color="#64748B", alpha=0.10)
-    else:
-        ax.plot(angulos, vc, color="#64748B", linewidth=2, label="Autoavaliação")
-        ax.fill(angulos, vc, color="#64748B", alpha=0.15)
+    ax.plot(angulos, vc, color="#2563EB", linewidth=2, label="Autoavaliação")
+    ax.fill(angulos, vc, color="#2563EB", alpha=0.15)
 
     ax.legend(loc="upper right", bbox_to_anchor=(1.15, 1.12), frameon=False, fontsize=10)
     plt.tight_layout()
@@ -321,7 +314,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
         if y < 170:
             y = nova_pagina()
 
-        media_pilar = sum(n_gestor[i] if modo_gestor else n_colab[i] for i in indices) / len(indices)
+        media_pilar = sum(n_colab[i] for i in indices) / len(indices)
         c.setFillColor(COR_FUNDO_ESCURO)
         c.roundRect(50, y - 8, width - 100, 30, 5, fill=1, stroke=0)
         c.setFillColor(COR_BRANCO)
@@ -352,16 +345,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             c.drawString(278, y, str(n_colab[i]))
             y -= 16
 
-            if modo_gestor:
-                c.setFont(F_BOLD, 8)
-                c.setFillColor(COR_PRIMARIA)
-                c.drawString(64, y, cargo_avaliador)
-                barra(c, 150, y - 1, 120, n_gestor[i], COR_PRIMARIA, cor_trilho=COR_PRIMARIA_CLARA)
-                c.setFillColor(cor_da_nota(n_gestor[i]))
-                c.setFont(F_BOLD, 9)
-                c.drawString(278, y, str(n_gestor[i]))
-                y -= 18
-
             if j_colab[i]:
                 y = texto_multilinha(
                     c, f"Just. colaborador: {j_colab[i]}", 64, y,
@@ -369,6 +352,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
                     fonte=F_ITALIC, tamanho=8, cor=COR_CINZA, contexto=ctx,
                 )
             
+            # Seção de notas do gestor completamente omitida. Apenas feedbacks textuais aparecem.
             if modo_gestor and j_gestor[i]:
                 y = texto_multilinha(
                     c, f"Obs {cargo_avaliador}: {j_gestor[i]}", 64, y,
@@ -380,7 +364,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
     # ---------- RADAR DOS PILARES ----------
     radar_png = os.path.join(PASTA_DADOS, f"_radar_{nome_limpo}.png")
     vals_colab = [sum(n_colab[i] for i in grupos[p]) / len(grupos[p]) for p in pilares_ordem]
-    vals_gestor = [sum(n_gestor[i] for i in grupos[p]) / len(grupos[p]) for p in pilares_ordem]
+    vals_gestor = vals_colab
     try:
         gerar_radar(pilares_ordem, vals_colab, vals_gestor, radar_png, modo_gestor=modo_gestor)
         y = nova_pagina()
@@ -424,7 +408,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
     return arquivo_pdf
 
 def enviar_email(nome, email_gestor, link_app, departamento):
-    # Escolha automática da senha do setor para anexar ao e-mail
     senha_setor = SENHA_FINANCEIRO if departamento == "Financeiro" else SENHA_BENEFICIOS
     
     msg = MIMEMultipart()
@@ -462,7 +445,7 @@ perguntas_data = [
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
-    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura and respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
+    {"pergunta": "Colaboro ativamente, elevo as pessoas ao redor e mantenho postura madura e respeitosa.", "pilar": "Mentalidade de time", "desc": "Sucesso coletivo acima do individual e equilíbrio nas relações."},
     {"pergunta": "Priorizo o sucesso coletivo, oferecendo suporte e colaboração constante aos meus colegas.", "pilar": "Mentalidade de time", "desc": "Espírito de equipe e apoio mútuo para vencer."},
 ]
 perguntas = [item["pergunta"] for item in perguntas_data]
@@ -503,7 +486,6 @@ def main():
                 if selecionado:
                     nome_para_carregar = selecionado
                 
-                # Inclusão da Lixeira na aba do gestor para deletar testes
                 if selecionado:
                     st.divider()
                     confirma_exclusao = st.checkbox("Confirmo excluir esta avaliação (Teste)")
@@ -559,8 +541,6 @@ def main():
         email_automatico = "roberta.bastos@globusseguros.com.br"
 
     gestor_input = st.text_input("Liderança Direta*", value=dados_existentes.get("gestor", lideranca_automatica) if is_bloqueado else lideranca_automatica, disabled=True)
-    
-    # Campo travado permanentemente junto com a Liderança Direta
     email_gestor_input = st.text_input("E-mail do Gestor*", value=dados_existentes.get("email_gestor", email_automatico) if is_bloqueado else email_automatico, disabled=True)
 
     st.divider()
@@ -593,9 +573,8 @@ def main():
                     n_c = v_nota_c
                     obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
                     
-                    # Gestor não dá mais nota nenhuma, apenas feedback textual explicativo
                     st.markdown("**Feedback da Liderança**")
-                    n_g = v_nota_c  # Assume a nota do colaborador para fins de espelhamento estrutural no gráfico/PDF
+                    n_g = v_nota_c  # Espelhado internamente sem expor notas ou seletores adicionais
                     v_obs_g = dados_existentes.get("just_g", [""] * num_total)[i] if is_bloqueado else ""
                     obs_g = st.text_area("Feedback Executivo", value=v_obs_g, key=f"obsg_{i}",
                                          placeholder="Pontos fortes e melhorias que constarão no PDF do gestor...")
@@ -641,8 +620,7 @@ def main():
                 "Como você enxerga seu papel no crescimento da empresa nos próximos meses? Como podemos ajudar?*",
                 value=v_dissert, disabled=is_bloqueado, height=180)
 
-        # Campo unificado para acumular feedbacks gerais para o relatório consolidado final
-        texto_feedback_consolidado = " ".join([f"[{perguntas_data[k]['pilar']}: {just_gestor[k]}]" for k in range(num_total) if just_gestor[k].strip()])
+        texto_feedback_consolidado = " | ".join([f"{perguntas_data[k]['pilar']}: {just_gestor[k]}" for k in range(num_total) if just_gestor[k].strip()])
 
         st.divider()
 
@@ -664,20 +642,19 @@ def main():
                     }
                     salvar_dados_colaborador(nome_input, dados_save)
                     
-                    # Salva os dados na planilha integrada
                     salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input)
-                    
-                    # Envia o e-mail anexando a senha correta do respectivo setor
                     enviar_email(nome_input, email_gestor_input, "https://6gxzkzhhzmceshkaojrpb7.streamlit.app/", area_input)
-                    st.success("Autoavaliação salva com sucesso e e-mail enviado ao gestor!")
-                    time.sleep(1)
+                    
+                    st.success("Autoavaliação cadastrada! O download do seu arquivo PDF foi liberado abaixo.")
+                    st.session_state["liberar_download_imediato"] = True
+                    time.sleep(0.5)
                     st.rerun()
                 elif not faltando_just:
-                    st.error("Preencha todos os campos obrigatórios (verifique se deixou categorias vazias ou sem preencher seu texto de visão de futuro).")
-        else:
+                    st.error("Preencha todos os campos obrigatórios antes de salvar.")
+        
+        if is_bloqueado or st.session_state.get("liberar_download_imediato", False):
             st.markdown("### 📄 Downloads Disponíveis")
             
-            # O Colaborador ao finalizar consegue baixar o PDF dele aqui sem erros
             if st.button("Gerar PDF Colaborador"):
                 pdf_colab_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_colab, "Liderança", modo_gestor=False)
                 with open(pdf_colab_path, "rb") as f:
@@ -697,15 +674,14 @@ def main():
                     dados_existentes["just_g"] = just_gestor
                     salvar_dados_colaborador(nome_input, dados_existentes)
                     
-                    # Sincroniza as alterações do gestor para atualizar a planilha do cliente
                     salvar_na_planilha(nome_input, gestor_input, area_input, texto_feedback_consolidado, periodo_input, ano_input)
                     
-                    st.success("Alterações e feedbacks salvos na base de dados!")
+                    st.success("Alterações e feedbacks integrados à planilha com sucesso!")
                     time.sleep(0.5)
                     st.rerun()
 
                 if st.button("Gerar PDF Gestor"):
-                    pdf_gestor_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_gestor, "Liderança", modo_gestor=True)
+                    pdf_gestor_path = gerar_pdf_final(cab, perguntas_data, notas_colab, notas_gestor, just_colab, just_gestor, dissert_input, media_colab, "Liderança", modo_gestor=True)
                     with open(pdf_gestor_path, "rb") as f:
                         st.download_button(
                             label="📥 Clique para Baixar PDF Completo (Visualização do Gestor)",
