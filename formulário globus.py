@@ -125,7 +125,6 @@ def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, pe
         "colaborador": colaborador,
         "lideranca": lideranca,
         "departamento": departamento,
-        "feedback": feedback_gestor if feedback_gestor else "Nenhum feedback inserido até o momento.",
         "periodo": periodo,
         "ano": ano
     }
@@ -435,7 +434,7 @@ def enviar_email(nome, email_gestor, link_app, departamento):
 
 # ========== DADOS DAS PERGUNTAS ==========
 perguntas_data = [
-    {"pergunta": "Busco melhoria contínua and domínio técnico, elevando o nível das minhas entregas e do time.", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
+    {"pergunta": "Busco melhoria contínua e domínio técnico, elevando o nível das minhas entregas e do time.", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
     {"pergunta": "Demonstro domínio técnico absoluto e precisão na execução das minhas tarefas operacionais.", "pilar": "Alta performance", "desc": "Precisão e domínio das ferramentas de trabalho."},
     {"pergunta": "Assumo erros e problemas agindo com postura de dono, sem transferir a responsabilidade aos outros.", "pilar": "Sem desculpa", "desc": "Autorresponsabilidade e foco total na solução rápida."},
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
