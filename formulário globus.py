@@ -35,8 +35,8 @@ PASTA_DADOS = "avaliacoes_salvas"
 PASTA_FONTES = os.path.join(PASTA_DADOS, "fontes")
 ARQUIVO_LOGO = os.path.join(PASTA_DADOS, "logo_maldivas.png")
 
-# Certifique-se de atualizar este link após publicar o código do Apps Script abaixo!
-URL_GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbz_9I93G3-qK9wX8zLnd_Uo6Gj_5B3PwtY4XpZ81VwP5N370w89rMeeI8t9i1_98S76/exec"
+# URL DO SEU GOOGLE APPS SCRIPT ATUALIZADA COM SUCESSO
+URL_GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbzHfMAGGNCCZlGya-qtunExpLxW9wbqyIl7gVvd7V8MsKeZ4ZZpL13_LwG8qmPbI104/exec"
 
 os.makedirs(PASTA_DADOS, exist_ok=True)
 os.makedirs(PASTA_FONTES, exist_ok=True)
@@ -330,7 +330,7 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             if y < 150:
                 y = nova_pagina()
 
-            # CORREÇÃO: Alterado de color=COR_TEXTO para cor=COR_TEXTO conforme assinatura da função
+            # Corrigido cor=COR_TEXTO para funcionar sem travar
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
