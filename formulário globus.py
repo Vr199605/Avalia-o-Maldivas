@@ -330,7 +330,6 @@ def gerar_pdf_final(dados_cabecalho, perguntas_data, n_colab, n_gestor,
             if y < 150:
                 y = nova_pagina()
 
-            # Corrigido cor=COR_TEXTO para funcionar sem travar
             y = texto_multilinha(
                 c, f"{i+1}. {perguntas_data[i]['pergunta']}", 50, y,
                 largura_chars=108, leading=13,
@@ -436,7 +435,7 @@ def enviar_email(nome, email_gestor, link_app, departamento):
 
 # ========== DADOS DAS PERGUNTAS ==========
 perguntas_data = [
-    {"pergunta": "Busco melhoria contínua e domínio técnico, elevando o nível das minhas entregas e do time.", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
+    {"pergunta": "Busco melhoria contínua and domínio técnico, elevando o nível das minhas entregas e do time.", "pilar": "Alta performance", "desc": "Excelência e superação constante de metas."},
     {"pergunta": "Demonstro domínio técnico absoluto e precisão na execução das minhas tarefas operacionais.", "pilar": "Alta performance", "desc": "Precisão e domínio das ferramentas de trabalho."},
     {"pergunta": "Assumo erros e problemas agindo com postura de dono, sem transferir a responsabilidade aos outros.", "pilar": "Sem desculpa", "desc": "Autorresponsabilidade e foco total na solução rápida."},
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
