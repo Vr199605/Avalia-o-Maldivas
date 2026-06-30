@@ -479,10 +479,10 @@ def renderizar_dashboard_gestao(setor_atual):
     pilar_forte_valor = df_pilares.iloc[0]["Média"]
     pilar_critico_nome = df_pilares.iloc[-1]["Pilar"]
     pilar_critico_valor = df_pilares.iloc[-1]["Média"]
-    media_geral_setor = df["Média Geral"].mean()
+    media_gener_setor = df["Média Geral"].mean()
 
     # =========================================================
-    # BLING-BLING VISUAL 1: CARDS DE INSIGHTS RÁPIDOS (KPIs)
+    # VISUAL 1: CARDS DE INSIGHTS RÁPIDOS (KPIs)
     # =========================================================
     st.markdown("### 🔍 Insights de Liderança")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -490,7 +490,7 @@ def renderizar_dashboard_gestao(setor_atual):
     with kpi1:
         st.metric(label="👥 Tamanho do Time", value=f"{len(df)} Colaboradores")
     with kpi2:
-        st.metric(label="📈 Média Geral do Setor", value=f"{media_geral_setor:.2f} / 5.00")
+        st.metric(label="📈 Média Geral do Setor", value=f"{media_gener_setor:.2f} / 5.00")
     with kpi3:
         st.metric(label="💪 Maior Força Cultural", value=pilar_forte_nome, delta=f"{pilar_forte_valor:.2f}")
     with kpi4:
@@ -499,28 +499,31 @@ def renderizar_dashboard_gestao(setor_atual):
     st.divider()
 
     # =========================================================
-    # VISÃO 2: DISTRIBUIÇÃO E DIREÇÃO DE TALENTOS (QUARTIS)
+    # VISÃO 2: DISTRIBUIÇÃO E DIREÇÃO DE TALENTOS (QUARTIS) — CORRIGIDA
     # =========================================================
     st.markdown("### 🎯 Quadrantes de Desenvolvimento Operacional")
     
     col_quad1, col_quad2, col_quad3 = st.columns(3)
     
     with col_quad1:
-        st.markdown("<h5 style='color: #16A34A;'>⭐ Destaques (Média ≥ 4.0)</h5>", unsafe_allowed_html=True)
+        # Corrigido: mudado para o parâmetro oficial 'unsafe_allow_html'
+        st.markdown("<h5 style='color: #16A34A;'>⭐ Destaques (Média ≥ 4.0)</h5>", unsafe_allow_html=True)
         destaques = df[df["Média Geral"] >= 4.0]["Colaborador"].tolist()
         if destaques:
             for d in destaques: st.markdown(f"• `{d}`")
         else: st.caption("Nenhum colaborador nesta faixa.")
             
     with col_quad2:
-        st.markdown("<h5 style='color: #D97706;'>🔹 Em Evolução (Média 3.0 a 3.9)</h5>", unsafe_allowed_html=True)
+        # Corrigido: mudado para o parâmetro oficial 'unsafe_allow_html'
+        st.markdown("<h5 style='color: #D97706;'>🔹 Em Evolução (Média 3.0 a 3.9)</h5>", unsafe_allow_html=True)
         evolucao = df[(df["Média Geral"] >= 3.0) & (df["Média Geral"] < 4.0)]["Colaborador"].tolist()
         if evolucao:
             for e in evolucao: st.markdown(f"• `{e}`")
         else: st.caption("Nenhum colaborador nesta faixa.")
             
     with col_quad3:
-        st.markdown("<h5 style='color: #DC2626;'>🚨 Plano de Ação Urgente (Média < 3.0)</h5>", unsafe_allowed_html=True)
+        # Corrigido: mudado para o parâmetro oficial 'unsafe_allow_html'
+        st.markdown("<h5 style='color: #DC2626;'>🚨 Plano de Ação Urgente (Média < 3.0)</h5>", unsafe_allow_html=True)
         alerta = df[df["Média Geral"] < 3.0]["Colaborador"].tolist()
         if alerta:
             for a in alerta: st.markdown(f"• `{a}`")
