@@ -101,14 +101,16 @@ def _slug(nome):
     return sem_acento.replace(" ", "_").lower()
 
 def salvar_dados_colaborador(nome, dados):
-    caminho = os.path.join(PASTA_DADOS, f"{_slug(nome)}.json")
+    text_slug = _slug(nome)
+    caminho = os.path.join(PASTA_DADOS, f"{text_slug}.json")
     with open(caminho, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False)
 
 def carregar_dados_colaborador(nome):
     if not nome:
         return None
-    caminho = os.path.join(PASTA_DADOS, f"{_slug(nome)}.json")
+    text_slug = _slug(nome)
+    caminho = os.path.join(PASTA_DADOS, f"{text_slug}.json")
     if os.path.exists(caminho):
         with open(caminho, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -571,6 +573,9 @@ def main():
                     st.info(f"Nota dada pelo colaborador: {v_nota_c} ({escala_nomes[v_nota_c]})")
                     n_c = v_nota_c
                     obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
+                    
+                    if obs_c.strip():
+                        st.warning(f"💬 **Justificativa do Colaborador:** {obs_c}")
                     
                     st.markdown("**Feedback da Liderança**")
                     n_g = v_nota_c  
