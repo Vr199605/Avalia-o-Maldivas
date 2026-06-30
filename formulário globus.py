@@ -436,10 +436,12 @@ def enviar_email(nome, email_gestor, link_app, departamento):
         st.error(f"Erro no envio de e-mail de notificação para o gestor: {e}")
         return False
 
-# ========== FUNÇÃO DO DASHBOARD CONSOLIDADO DO TIME ==========
+# ========== FUNÇÃO DO DASHBOARD CONSOLIDADO EXECUTIVO DO TIME ==========
 def renderizar_dashboard_gestao(setor_atual):
-    st.markdown(f"## 📊 Dashboard de Performance - Time {setor_atual}")
+    st.markdown(f"## 📊 Dashboard Executivo de Performance — Time {setor_atual}")
+    st.caption("Análise macro consolidada para tomada de decisões estratégicas, mapeamento de treinamentos e planos de feedback.")
     
+    # 1. CARREGAR E TRATAR DADOS
     arquivos = glob.glob(os.path.join(PASTA_DADOS, "*.json"))
     dados_time = []
     
@@ -458,45 +460,98 @@ def renderizar_dashboard_gestao(setor_atual):
                 dados_time.append(row)
                 
     if not dados_time:
-        st.info("Nenhuma avaliação respondida para este setor ainda.")
+        st.info("🎯 Nenhuma avaliação respondida para este setor ainda.")
         return
 
     df = pd.DataFrame(dados_time)
 
-    st.markdown("### 🗺️ Matriz de Competências (Visão Geral do Time)")
-    st.caption("Notas de autoavaliação consolidadas. Use as cores para identificar talentos e gargalos.")
-    df_visualizacao = df.set_index("Colaborador")
-    st.dataframe(
-        df_visualizacao.style.background_gradient(cmap="RdYlGn", vmin=1, vmax=5).format("{:.2f}"),
-        use_container_width=True
-    )
-
-    st.divider()
-
-    st.markdown("### 🧠 Diagnóstico Estratégico do Setor")
+    # Calcular as médias dos pilares para as caixas de KPI estruturadas
     medias_pilares = {}
     for item in perguntas_data:
         pilar = item["pilar"]
         colunas_pilar = [col for col in df.columns if pilar in col]
         if colunas_pilar:
             medias_pilares[pilar] = df[colunas_pilar].mean().mean()
+            
+    df_pilares = pd.DataFrame(list(medias_pilares.items()), columns=["Pilar", "Média"]).sort_values(by="Média", ascending=False)
+    
+    pilar_forte_nome = df_pilares.iloc[0]["Pilar"]
+    pilar_forte_valor = df_pilares.iloc[0]["Média"]
+    pilar_critico_nome = df_pilares.iloc[-1]["Pilar"]
+    pilar_critico_valor = df_pilares.iloc[-1]["Média"]
+    media_geral_setor = df["Média Geral"].mean()
 
-    df_pilares = pd.DataFrame(list(medias_pilares.items()), columns=["Pilar Estratégico", "Média do Setor"]).sort_values(by="Média do Setor", ascending=False)
+    # =========================================================
+    # BLING-BLING VISUAL 1: CARDS DE INSIGHTS RÁPIDOS (KPIs)
+    # =========================================================
+    st.markdown("### 🔍 Insights de Liderança")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    
+    with kpi1:
+        st.metric(label="👥 Tamanho do Time", value=f"{len(df)} Colaboradores")
+    with kpi2:
+        st.metric(label="📈 Média Geral do Setor", value=f"{media_geral_setor:.2f} / 5.00")
+    with kpi3:
+        st.metric(label="💪 Maior Força Cultural", value=pilar_forte_nome, delta=f"{pilar_forte_valor:.2f}")
+    with kpi4:
+        st.metric(label="⚠️ Ponto de Atenção", value=pilar_critico_nome, delta=f"{pilar_critico_valor:.2f}", delta_color="inverse")
 
-    col_forte, col_fraco = st.columns(2)
-    with col_forte:
-        st.success("#### 💪 Pontos Fortes do Time")
-        top_fortes = df_pilares.head(2)
-        for _, row in top_fortes.iterrows():
-            st.markdown(f"**{row['Pilar Estratégico']}:** Média acumulada de `{row['Média do Setor']:.2f}`")
-        st.caption("Estes são os pilares de maior aderência e cultura consolidada no setor.")
+    st.divider()
 
-    with col_fraco:
-        st.error("#### ⚠️ Oportunidades de Melhoria (Pontos Fracos)")
-        top_fracos = df_pilares.tail(2)
-        for _, row in top_fracos.iterrows():
-            st.markdown(f"**{row['Pilar Estratégico']}:** Média acumulada de `{row['Média do Setor']:.2f}`")
-        st.caption("Pilares com menor nota. Sugere-se treinamentos ou alinhamento operacional nestes quesitos.")
+    # =========================================================
+    # VISÃO 2: DISTRIBUIÇÃO E DIREÇÃO DE TALENTOS (QUARTIS)
+    # =========================================================
+    st.markdown("### 🎯 Quadrantes de Desenvolvimento Operacional")
+    
+    col_quad1, col_quad2, col_quad3 = st.columns(3)
+    
+    with col_quad1:
+        st.markdown("<h5 style='color: #16A34A;'>⭐ Destaques (Média ≥ 4.0)</h5>", unsafe_allowed_html=True)
+        destaques = df[df["Média Geral"] >= 4.0]["Colaborador"].tolist()
+        if destaques:
+            for d in destaques: st.markdown(f"• `{d}`")
+        else: st.caption("Nenhum colaborador nesta faixa.")
+            
+    with col_quad2:
+        st.markdown("<h5 style='color: #D97706;'>🔹 Em Evolução (Média 3.0 a 3.9)</h5>", unsafe_allowed_html=True)
+        evolucao = df[(df["Média Geral"] >= 3.0) & (df["Média Geral"] < 4.0)]["Colaborador"].tolist()
+        if evolucao:
+            for e in evolucao: st.markdown(f"• `{e}`")
+        else: st.caption("Nenhum colaborador nesta faixa.")
+            
+    with col_quad3:
+        st.markdown("<h5 style='color: #DC2626;'>🚨 Plano de Ação Urgente (Média < 3.0)</h5>", unsafe_allowed_html=True)
+        alerta = df[df["Média Geral"] < 3.0]["Colaborador"].tolist()
+        if alerta:
+            for a in alerta: st.markdown(f"• `{a}`")
+        else: st.caption("Nenhum colaborador em nível crítico.")
+
+    st.divider()
+
+    # =========================================================
+    # VISÃO 3: MATRIZ DE COMPETÊNCIAS INTERATIVA E CLASSIFICÁVEL
+    # =========================================================
+    st.markdown("### 🗺️ Matriz de Competências Dinâmica")
+    st.caption("Use os cabeçalhos das colunas para ordenar o time por Notas Técnicas ou por Pilares de Cultura específicos.")
+    
+    df_clean = df.copy()
+    colunas_renomeadas = {"Colaborador": "Colaborador"}
+    for col in df_clean.columns:
+        if col != "Colaborador" and col != "Média Geral":
+            partes = col.split("_")
+            colunas_renomeadas[col] = f"{partes[0]}_{partes[1]} ({partes[2]})"
+            
+    df_clean = df_clean.rename(columns=colunas_renomeadas).set_index("Colaborador")
+    
+    colunas_finais = ["Média Geral"] + [c for c in df_clean.columns if c != "Média Geral"]
+    df_clean = df_clean[colunas_finais]
+
+    st.dataframe(
+        df_clean.style.background_gradient(cmap="RdYlGn", vmin=1, vmax=5)
+        .highlight_max(axis=0, color="#bbf7d0")
+        .format("{:.2f}"),
+        use_container_width=True
+    )
 
 # ========== DADOS DAS PERGUNTAS ==========
 perguntas_data = [
@@ -578,7 +633,7 @@ def main():
 
     st.title("🏝️ PROGRAMA DE AVALIAÇÃO MALDIVAS")
 
-    # Se for gestor e selecionar o Dashboard do time, renderiza a tela macro e encerra o fluxo
+    # Se for gestor e escolher o Dashboard do time, renderiza a tela macro completa
     if is_gestao and modo_visao == "Dashboard do Time Total":
         renderizar_dashboard_gestao(setor_atual)
         return
