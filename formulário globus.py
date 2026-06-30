@@ -419,7 +419,7 @@ def enviar_email(nome, email_gestor, link_app, departamento):
         f"Olá,\n\nO colaborador {nome} concluiu a autoavaliação de desempenho.\n"
         f"Para visualizar as respostas, adicionar seus feedbacks e baixar os relatórios, acesse o portal pelo link abaixo:\n\n"
         f"{link_app}\n\n"
-        f"🔑 Sua Credencial de Acesso para o setor {departamento} é: {senha_setor}"
+        f"🔑 Sua Credencial de Acesso para o setor {departamento} is: {senha_setor}"
     )
     msg.attach(MIMEText(corpo, "plain"))
     try:
@@ -481,7 +481,14 @@ def main():
         if is_gestao:
             st.success(f"Acesso: Gestão {'Financeiro' if is_financeiro else 'Benefícios'}")
             st.divider()
-            lista_pendentes = listar_avaliacoes_pendentes()
+            
+            setor_atual = "Financeiro" if is_financeiro else "Benefícios"
+            lista_todas = listar_avaliacoes_pendentes()
+            lista_pendentes = [
+                n for n in lista_todas 
+                if carregar_dados_colaborador(n) and carregar_dados_colaborador(n).get("area") == setor_atual
+            ]
+            
             if lista_pendentes:
                 selecionado = st.selectbox("Escolha o Colaborador:", [""] + lista_pendentes)
                 if selecionado:
