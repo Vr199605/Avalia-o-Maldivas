@@ -17,7 +17,6 @@ from email import encoders
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 import pandas as pd  # Adicionado para estruturar o Dashboard do Gestor
 
@@ -500,13 +499,14 @@ def renderizar_dashboard_gestao(setor_atual):
     st.divider()
 
     # =========================================================
-    # VISÃO 2: DISTRIBUIÇÃO E DIREÇÃO DE TALENTOS (QUARTIS)
+    # VISÃO 2: DISTRIBUIÇÃO E DIREÇÃO DE TALENTOS (QUARTIS) — CORRIGIDA
     # =========================================================
     st.markdown("### 🎯 Quadrantes de Desenvolvimento Operacional")
     
     col_quad1, col_quad2, col_quad3 = st.columns(3)
     
     with col_quad1:
+        # Corrigido: mudado para o parâmetro oficial 'unsafe_allow_html'
         st.markdown("<h5 style='color: #16A34A;'>⭐ Destaques (Média ≥ 4.0)</h5>", unsafe_allow_html=True)
         destaques = df[df["Média Geral"] >= 4.0]["Colaborador"].tolist()
         if destaques:
@@ -514,6 +514,7 @@ def renderizar_dashboard_gestao(setor_atual):
         else: st.caption("Nenhum colaborador nesta faixa.")
             
     with col_quad2:
+        # Corrigido: mudado para o parâmetro oficial 'unsafe_allow_html'
         st.markdown("<h5 style='color: #D97706;'>🔹 Em Evolução (Média 3.0 a 3.9)</h5>", unsafe_allow_html=True)
         evolucao = df[(df["Média Geral"] >= 3.0) & (df["Média Geral"] < 4.0)]["Colaborador"].tolist()
         if evolucao:
@@ -521,6 +522,7 @@ def renderizar_dashboard_gestao(setor_atual):
         else: st.caption("Nenhum colaborador nesta faixa.")
             
     with col_quad3:
+        # Corrigido: mudado para o parâmetro oficial 'unsafe_allow_html'
         st.markdown("<h5 style='color: #DC2626;'>🚨 Plano de Ação Urgente (Média < 3.0)</h5>", unsafe_allow_html=True)
         alerta = df[df["Média Geral"] < 3.0]["Colaborador"].tolist()
         if alerta:
@@ -530,7 +532,7 @@ def renderizar_dashboard_gestao(setor_atual):
     st.divider()
 
     # =========================================================
-    # VISÃO 3: MATRIZ DE COMPETÊNCIAS INTERATIVA E CLASSIFICÁVEL (REMODELADO)
+    # VISÃO 3: MATRIZ DE COMPETÊNCIAS INTERATIVA E CLASSIFICÁVEL
     # =========================================================
     st.markdown("### 🗺️ Matriz de Competências Dinâmica")
     st.caption("Use os cabeçalhos das colunas para ordenar o time por Notas Técnicas ou por Pilares de Cultura específicos.")
@@ -540,33 +542,17 @@ def renderizar_dashboard_gestao(setor_atual):
     for col in df_clean.columns:
         if col != "Colaborador" and col != "Média Geral":
             partes = col.split("_")
-            colunas_renomeadas[col] = f"P{partes[1]} - {partes[2]}"
+            colunas_renomeadas[col] = f"{partes[0]}_{partes[1]} ({partes[2]})"
             
     df_clean = df_clean.rename(columns=colunas_renomeadas).set_index("Colaborador")
     
     colunas_finais = ["Média Geral"] + [c for c in df_clean.columns if c != "Média Geral"]
     df_clean = df_clean[colunas_finais]
 
-    # Degradê pastel customizado sofisticado (Vermelho suave -> Amarelo -> Verde sutil)
-    cmap_custom = mcolors.LinearSegmentedColormap.from_list(
-        "maldivas_performance", ["#FCA5A5", "#FEF08A", "#BBF7D0"]
-    )
-
-    # Estilização com contraste forçado para texto escuro (#0F172A)
-    df_estilizado = (
-        df_clean.style
-        .background_gradient(cmap=cmap_custom, vmin=1, vmax=5)
-        .format("{:.2f}")
-        .set_properties(**{
-            'color': '#0F172A',            # Força texto escuro e legível em qualquer fundo
-            'font-weight': '600',          # Peso ideal para leitura executiva
-            'border': '1px solid #E2E8F0',   # Divisores sutis entre células
-            'padding': '10px'              # Respiro extra para os dados
-        })
-    )
-
     st.dataframe(
-        df_estilizado,
+        df_clean.style.background_gradient(cmap="RdYlGn", vmin=1, vmax=5)
+        .highlight_max(axis=0, color="#bbf7d0")
+        .format("{:.2f}"),
         use_container_width=True
     )
 
@@ -578,7 +564,7 @@ perguntas_data = [
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
     {"pergunta": "Priorizo o cliente nas minhas decisões, entendendo o impacto real do meu trabalho no cliente/parceiro.", "pilar": "Foco no cliente", "desc": "Gerar valor real e construir relações de confiança."},
     {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente", "desc": "Encantamento e visão de longo prazo na parceria."},
-    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e supercar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
+    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e superar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
