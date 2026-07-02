@@ -98,15 +98,12 @@ def configurar_fontes():
 def carregar_dados_da_planilha():
     """Busca em tempo real as linhas cadastradas no Sheets para evitar perdas do servidor."""
     try:
-        # Lendo diretamente a versão web/CSV publicada da sua planilha ou via API do Apps Script
-        # Adaptado para ler os dados enviados estruturadamente.
         url_read = URL_GOOGLE_SHEETS_API + "?action=read"
         req = urllib.request.Request(url_read, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as response:
             dados = json.loads(response.read().decode("utf-8"))
             return pd.DataFrame(dados)
     except Exception:
-        # Fallback de segurança para não quebrar a aplicação caso a API esteja instável
         return pd.DataFrame(columns=["colaborador", "lideranca", "departamento", "feedback_gestor", "periodo", "ano", "notas_c", "just_c", "dissert"])
 
 def _slug(nome):
@@ -115,7 +112,6 @@ def _slug(nome):
     return sem_acento.replace(" ", "_").lower()
 
 def salvar_dados_colaborador(nome, dados):
-    """Mantém o salvamento em JSON local para redundância de curto prazo."""
     text_slug = _slug(nome)
     caminho = os.path.join(PASTA_DADOS, f"{text_slug}.json")
     with open(caminho, "w", encoding="utf-8") as f:
@@ -128,9 +124,8 @@ def carregar_dados_colaborador(nome, df_sheets=None):
     if df_sheets is not None and not df_sheets.empty:
         df_filtrado = df_sheets[df_sheets["colaborador"].str.lower() == nome.lower()]
         if not df_filtrado.empty:
-            linha = df_filtrado.iloc[-1] # Pega a última inserção válida
+            linha = df_filtrado.iloc[-1]
             
-            # Reconstrói o dicionário padrão que o PDF espera
             try:
                 notas_c = json.loads(linha.get("notas_c", "[3,3,3,3,3,3,3,3,3,3,3,3]"))
                 just_c = json.loads(linha.get("just_c", '["","","","","","","","","","","",""]'))
@@ -140,21 +135,22 @@ def carregar_dados_colaborador(nome, df_sheets=None):
                 notas_c = [3]*12; just_c = [""]*12; notas_g = [3]*12; just_g = [""]*12
 
             return {
-                "notas_c": notas_c, "just_c": just_c, "notas_g": notas_g, "just_g": just_g,
-                "area": linha.get("departamento", "Financeiro"),
-                "gestor": linha.get("lideranca", "Elaine Jatobá"),
+                "notas_c": list(notas_c), "just_c": list(just_c), "notas_g": list(notas_g), "just_g": list(just_g),
+                "area": str(linha.get("departamento", "Financeiro")),
+                "gestor": str(linha.get("lideranca", "Elaine Jatobá")),
                 "email_gestor": "globus@globus.com",
-                "periodo": linha.get("periodo", "1º semestre"),
-                "ano": linha.get("ano", "2026"),
-                "dissert": linha.get("dissert", "")
+                "periodo": str(linha.get("periodo", "1º semestre")),
+                "ano": str(linha.get("ano", "2026")),
+                "dissert": str(linha.get("dissert", ""))
             }
             
-    # Fallback local se não achar no Sheets
     text_slug = _slug(nome)
     caminho = os.path.join(PASTA_DADOS, f"{text_slug}.json")
     if os.path.exists(caminho):
         with open(caminho, "r", encoding="utf-8") as f:
-            return json.load(f)
+            res = json.load(f)
+            if isinstance(res, dict):
+                return res
     return None
 
 def salvar_na_planilha(colaborador, lideranca, departamento, feedback_gestor, periodo, ano, adicionais=None):
@@ -382,7 +378,7 @@ def enviar_email(nome, email_gestor, link_app, departamento):
         return True
     except: return False
 
-# ========== DASHBOARD AVANÇADO DE BI TRALHADO EM REAL-TIME ==========
+# ========== DASHBOARD AVANÇADO DE BI ==========
 def renderizar_dashboard_gestao(setor_atual, df_sheets):
     st.markdown(f"## 📊 Dashboard Executivo de Performance — Time {setor_atual}")
     st.caption("Métricas consolidadas em tempo real direto do banco de dados unificado.")
@@ -391,7 +387,6 @@ def renderizar_dashboard_gestao(setor_atual, df_sheets):
         st.info("🎯 Nenhuma avaliação integrada ao Sheets para este setor ainda.")
         return
 
-    # Filtrar o DataFrame pelo departamento correto de forma segura
     df_setor = df_sheets[df_sheets["departamento"].str.lower() == setor_atual.lower()].copy()
 
     if df_setor.empty:
@@ -415,7 +410,6 @@ def renderizar_dashboard_gestao(setor_atual, df_sheets):
 
     df = pd.DataFrame(dados_time)
 
-    # Métricas de KPI do BI
     media_geral_setor = df["Média Geral"].mean()
     desvio_padrao = df["Média Geral"].std() if len(df) > 1 else 0.0
     status_coesao = "Alta" if desvio_padrao < 0.4 else "Moderada" if desvio_padrao < 0.8 else "Dispersa"
@@ -428,7 +422,6 @@ def renderizar_dashboard_gestao(setor_atual, df_sheets):
 
     st.divider()
 
-    # MATRIZ DE COMPETÊNCIAS PREMIUM COM CONTRASTE ABSOLUTO
     st.markdown("### 🗺️ Matriz de Competências Dinâmica")
     df_clean = df.copy()
     colunas_renomeadas = {"Colaborador": "Colaborador"}
@@ -447,7 +440,7 @@ def renderizar_dashboard_gestao(setor_atual, df_sheets):
         .background_gradient(cmap=cmap_custom, vmin=1, vmax=5)
         .format("{:.2f}")
         .set_properties(**{
-            'color': '#0F172A',            # Força o contraste preto/grafite absoluto em cima do verde/amarelo
+            'color': '#0F172A',            
             'font-weight': '600',
             'border': '1px solid #E2E8F0',
             'padding': '10px'
@@ -463,7 +456,7 @@ perguntas_data = [
     {"pergunta": "Cumpro integralmente meus compromissos e prazos, sem necessidade de cobranças externas.", "pilar": "Sem desculpa", "desc": "Comprometimento e disciplina com o que foi acordado."},
     {"pergunta": "Priorizo o cliente nas minhas decisões, entendendo o impacto real do meu trabalho no cliente/parceiro.", "pilar": "Foco no cliente", "desc": "Gerar valor real e construir relações de confiança."},
     {"pergunta": "Minhas entregas geram o valor máximo esperado, impactando positivamente nossos parceiros.", "pilar": "Foco no cliente", "desc": "Encantamento e visão de longo prazo na parceria."},
-    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e superar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
+    {"pergunta": "Mantenho rigorosa disciplina e constância para cumprir metas e supercar obstáculos.", "pilar": "Obcecados por resultados", "desc": "Fome de crescer e consistência na execução diária."},
     {"pergunta": "Demonstro determinação incansável para superar metas e buscar o crescimento contínuo.", "pilar": "Obcecados por resultados", "desc": "Resiliência e foco no atingimento de objetivos ambiciosos."},
     {"pergunta": "Tomo iniciativa e proponho soluções com autonomia, assumindo riscos inteligentes.", "pilar": "Postura empreendedora", "desc": "Agir como dono, resolvendo problemas sem esperar ordens."},
     {"pergunta": "Possuo autonomia para conduzir minhas demandas do início ao fim com mínima supervisão.", "pilar": "Postura empreendedora", "desc": "Independência e proatividade na condução de processos."},
@@ -478,7 +471,6 @@ def main():
     st.set_page_config(page_title="Avaliação Maldivas", layout="wide")
     configurar_fontes()
 
-    # PUXAR BASE REAL-TIME LOGO NO INIT DO SISTEMA
     df_sheets = carregar_dados_da_planilha()
 
     if os.path.exists(ARQUIVO_LOGO): st.image(ARQUIVO_LOGO, width=350)
@@ -513,6 +505,11 @@ def main():
         return
 
     dados_existentes = carregar_dados_colaborador(nome_para_carregar, df_sheets)
+    
+    # GARANTIA ABSOLUTA DE TIPO: Se dados_existentes não for um dicionário válido, anula para evitar AttributeError
+    if not isinstance(dados_existentes, dict):
+        dados_existentes = None
+        
     is_bloqueado = dados_existentes is not None
 
     col_cab1, col_cab2 = st.columns(2)
@@ -540,7 +537,6 @@ def main():
     titulos_abas = [f"{p} ➜" for p in pilares_ordem] + ["📊 Média e Visão de Futuro"]
     abas = st.tabs(titulos_abas)
 
-    # Mapeamento dinâmico
     for idx_aba, aba in enumerate(abas[:-1]):
         pil = pilares_ordem[idx_aba]
         indices_pilar = [k for k, item in enumerate(perguntas_data) if item["pilar"] == pil]
@@ -553,7 +549,7 @@ def main():
                 if is_gestao:
                     st.info(f"Nota na Planilha: {v_nota_c} ({escala_nomes[v_nota_c]})")
                     n_c = v_nota_c
-                    obs_c = dados_existentes.get("just_c", [""] * num_total)[i]
+                    obs_c = dados_existentes.get("just_c", [""] * num_total)[i] if is_bloqueado else ""
                     if obs_c.strip(): st.warning(f"💬 Justificativa: {obs_c}")
                     n_g, obs_g = v_nota_c, ""
                 else:
@@ -579,7 +575,6 @@ def main():
         if not is_bloqueado:
             if st.button("Finalizar e Transmitir para o Banco de Dados", type="primary", use_container_width=True):
                 if nome_input and dissert_input:
-                    # Enviar strings estruturadas em JSON das notas e justificativas para o Google Sheets receber tudo em uma tacada só
                     payload_adicional = {
                         "notas_c": json.dumps(notas_colab),
                         "just_c": json.dumps(just_colab),
